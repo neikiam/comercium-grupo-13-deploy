@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+{% block title %}Productos • Centro de Comercio Digital{% endblock %}
+
+{% block content %}
+<div class="container" style="margin-top: 2rem; margin-bottom: 2rem;">
+  <h2 style="text-align:center; margin-bottom:1.5rem;">Todos los productos</h2>
+
+  {% if user.is_authenticated %}
+    <p style="text-align:center; margin-bottom: 1.5rem;">
+      <a href="{% url 'mercado:productcreate' %}" class="btn-retro">➕ Publicar producto</a>
+    </p>
+  {% endif %}
+
+  <!-- Búsqueda -->
+  <div class="retro-panel" style="margin-bottom: 2rem;">
+    <form method="get" class="form-retro" id="filterForm">
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: end; margin-bottom: 0.5rem;">
+        <div style="flex: 2; min-width: 220px;">
+          <label for="q">Buscar:</label>
+          <input type="text" id="q" name="q" value="{{ request.GET.q }}" placeholder="Buscar por título, descripción o marca..." />
+        </div>
+
+        <div style="flex: 1; min-width: 220px;">
+          <label for="order">Ordenar:</label>
+          <select name="order" id="order">
+            <option value="recent" {% if request.GET.order == "recent" or not request.GET.order %}selected{% endif %}>Más recientes</option>
+            <option value="oldest" {% if request.GET.order == "oldest" %}selected{% endif %}>Más antiguos</option>
+            <option value="price_asc" {% if request.GET.order == "price_asc" %}selected{% endif %}>Precio: menor a mayor</option>
+            <option value="price_desc" {% if request.GET.order == "price_desc" %}selected{% endif %}>Precio: mayor a menor</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex; gap: 0.5rem; align-items:center; margin-bottom: 1rem;">
+        <button type="submit" class="btn-retro btn-small">Buscar</button>
+      </div>
+
+      <div style="margin-top: 1rem;">
+        <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom: 0.5rem;">
+          <label style="margin: 0; font-weight: bold;">Categorías:</label>
+          <button type="button" id="toggleCategories" class="btn-retro-secondary btn-small" aria-expanded="false" title="Mostrar/ocultar categorías">▼</button>
+        </div>
+        <div id="categoriesWrap" style="display:none;">
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+            <button type="button" id="btnTodas" class="btn-category-toggle" style="background: var(--retro-accent); color: white; border: 2px solid var(--retro-border); padding: 0.4rem 0.9rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-weight: bold; box-shadow: 2px 2px 0 rgba(0,0,0,0.2); transition: all 0.2s;">
+              TODAS
+            </button>
+            {% for cat_code, cat_label in all_categories %}
+              <button 
+                type="button" 
+                class="btn-category" 
+                data-category="{{ cat_code }}"
+                data-active="true"
+                style="background: #6b8b6b; color: white; border: 2px solid var(--retro-border); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.8rem; cursor: pointer; box-shadow: 2px 2px 0 rgba(0,0,0,0.15); transition: all 0.2s;"
+              >
+                {{ cat_label }}
+              </button>
+            {% endfor %}
+          </div>
+          <input type="hidden" name="categories" id="categoriesInput" value="">
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    (function() {
+  const btnTodas = document.getElementById('btnTodas');
+  const btnCategories = document.querySelectorAll('.btn-category');
+  const categoriesInput = document.getElementById('categoriesInput');
+  const form = document.getElementById('filterForm');
+  const toggleBtn = document.getElementById('toggleCategories');
+  const categoriesWrap = document.getElementById('categoriesWrap');
+  const orderSelect = document.getElementById('order');
+
+      const activeColor = '#6b8b6b'; // verde
+      const inactiveColor = '#a86464'; // rojo
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const categoriesParam = urlParams.get('categories');
+  const LS_KEY_CATS = 'mercado.categories.active';
+  const LS_KEY_EXPANDED = 'mercado.categories.expanded';
+  const LS_KEY_ORDER = 'mercado.order';
+
+      // Inicialización: URL tiene prioridad; si no, usar localStorage
+      let initialCats = null;
+      if (categoriesParam !== null) {
+        initialCats = categoriesParam; // puede ser cadena vacía
+        try { localStorage.setItem(LS_KEY_CATS, initialCats); } catch (e) {}
+      } else {
+        try { initialCats = localStorage.getItem(LS_KEY_CATS); } catch (e) { initialCats = null; }
+      }
+
+      if (initialCats !== null) {
+        if (initialCats === '') {
+          btnCategories.forEach(btn => {
+            btn.setAttribute('data-active', 'false');
+            btn.style.background = inactiveColor;
+          });
+        } else {
+          const activeCats = initialCats.split(',');
+          btnCategories.forEach(btn => {
+            const cat = btn.getAttribute('data-category');
+            if (activeCats.includes(cat)) {
+              btn.setAttribute('data-active', 'true');
+              btn.style.background = activeColor;
+            } else {
+              btn.setAttribute('data-active', 'false');
+              btn.style.background = inactiveColor;
+            }
+          });
+        }
+      }
+
+      // Mostrar/ocultar categorías con el botón ▼/▲
+      function setCategoriesExpanded(expanded) {
+        categoriesWrap.style.display = expanded ? 'block' : 'none';
+        toggleBtn.textContent = expanded ? '▲' : '▼';
+        toggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      }
+
+      // Estado inicial expandido desde localStorage o, si no hay, por presencia del parámetro en URL
+      let initialExpanded = false;
+      try {
+        const saved = localStorage.getItem(LS_KEY_EXPANDED);
+        if (saved !== null) initialExpanded = saved === 'true';
+        else initialExpanded = categoriesParam !== null;
+      } catch (e) { initialExpanded = categoriesParam !== null; }
+      setCategoriesExpanded(initialExpanded);
+
+      // Orden: URL tiene prioridad, si no usar localStorage
+      (function initOrder() {
+        const urlOrder = urlParams.get('order');
+        if (!orderSelect) return;
+        if (urlOrder) {
+          orderSelect.value = urlOrder;
+          try { localStorage.setItem(LS_KEY_ORDER, urlOrder); } catch (e) {}
+        } else {
+          try {
+            const savedOrder = localStorage.getItem(LS_KEY_ORDER);
+            if (savedOrder) orderSelect.value = savedOrder;
+          } catch (e) {}
+        }
+        // Guardar en cambios manuales también
+        orderSelect.addEventListener('change', function() {
+          try { localStorage.setItem(LS_KEY_ORDER, orderSelect.value); } catch (e) {}
+        });
+      })();
+
+      toggleBtn.addEventListener('click', function() {
+        const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+        const next = !isExpanded;
+        setCategoriesExpanded(next);
+        try { localStorage.setItem(LS_KEY_EXPANDED, next ? 'true' : 'false'); } catch (e) {}
+      });
+
+      function updateCategoriesInput() {
+        const active = [];
+        btnCategories.forEach(btn => {
+          if (btn.getAttribute('data-active') === 'true') {
+            active.push(btn.getAttribute('data-category'));
+          }
+        });
+        const value = active.length > 0 ? active.join(',') : '';
+        categoriesInput.value = value;
+        try { localStorage.setItem(LS_KEY_CATS, value); } catch (e) {}
+      }
+
+      btnCategories.forEach(btn => {
+        btn.addEventListener('click', function() {
+          const isActive = this.getAttribute('data-active') === 'true';
+          this.setAttribute('data-active', isActive ? 'false' : 'true');
+          this.style.background = isActive ? inactiveColor : activeColor;
+          updateCategoriesInput();
+        });
+
+        btn.addEventListener('dblclick', function(e) {
+          e.preventDefault();
+          const thisCat = this.getAttribute('data-category');
+          btnCategories.forEach(b => {
+            if (b.getAttribute('data-category') === thisCat) {
+              b.setAttribute('data-active', 'true');
+              b.style.background = activeColor;
+            } else {
+              b.setAttribute('data-active', 'false');
+              b.style.background = inactiveColor;
+            }
+          });
+          updateCategoriesInput();
+        });
+      });
+
+      btnTodas.addEventListener('click', function() {
+        const allActive = Array.from(btnCategories).every(b => b.getAttribute('data-active') === 'true');
+        const newState = allActive ? 'false' : 'true';
+        const newColor = allActive ? inactiveColor : activeColor;
+        
+        btnCategories.forEach(btn => {
+          btn.setAttribute('data-active', newState);
+          btn.style.background = newColor;
+        });
+        updateCategoriesInput();
+      });
+
+      form.addEventListener('submit', function() {
+        updateCategoriesInput();
+      });
+
+      updateCategoriesInput();
+    })();
+  </script>
+
+  <div class="grid-retro">
+    {% for product in page_obj %}
+      <div class="card-retro">
+        <!-- Carrusel de imágenes -->
+        {% if product.image or product.images.all %}
+          <div class="product-carousel" data-product-id="{{ product.id }}" style="position: relative;">
+            <div class="carousel-images" style="position: relative; width: 100%; height: 200px; overflow: hidden; background: #f0f0f0;">
+              <!-- Imagen principal (thumbnail) -->
+              {% if product.image %}
+                <img src="{{ product.image.url }}" alt="{{ product.title }}" class="carousel-image active" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 1; transition: opacity 0.3s;" data-full-url="{{ product.image.url }}" loading="lazy">
+              {% endif %}
+              
+              <!-- Imágenes adicionales -->
+              {% for img in product.images.all %}
+                <img src="{{ img.image.url }}" alt="{{ product.title }}" class="carousel-image" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.3s;" data-full-url="{{ img.image.url }}" loading="lazy">
+              {% endfor %}
+            </div>
+            
+            <!-- Controles del carrusel (solo si hay múltiples imágenes) -->
+            {% if product.images.all|length > 0 %}
+              <button class="carousel-btn carousel-prev" style="position: absolute; left: 5px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.6); color: white; border: none; padding: 10px; cursor: pointer; border-radius: 4px; font-size: 18px; z-index: 10;" aria-label="Imagen anterior">‹</button>
+              <button class="carousel-btn carousel-next" style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.6); color: white; border: none; padding: 10px; cursor: pointer; border-radius: 4px; font-size: 18px; z-index: 10;" aria-label="Imagen siguiente">›</button>
+              
+              <!-- Indicadores -->
+              <div class="carousel-indicators" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 10;">
+                <span class="indicator active" style="width: 8px; height: 8px; background: white; border-radius: 50%; display: inline-block; box-shadow: 0 0 3px rgba(0,0,0,0.5);"></span>
+                {% for img in product.images.all %}
+                  <span class="indicator" style="width: 8px; height: 8px; background: rgba(255,255,255,0.5); border-radius: 50%; display: inline-block; box-shadow: 0 0 3px rgba(0,0,0,0.5);"></span>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        {% endif %}
+        
+        <div style="padding: 1rem;">
+          {% if not product.is_available %}
+            <span style="display:inline-block; background: #f44336; color: #fff; padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.8rem; margin-bottom: 0.5rem;">Sin stock</span>
+          {% endif %}
+          <h3 style="margin: 0.5rem 0; font-size: 1.1rem; text-align: center;">
+            <a href="{% url 'mercado:product-detail' product.id %}" style="color: inherit; text-decoration: none;">
+              {{ product.title }}
+            </a>
+          </h3>
+          <p style="margin: 0.5rem 0; color: #555; text-align: center;">{{ product.description|truncatewords:20 }}</p>
+          <p style="font-size: 1.1rem; font-weight: bold; color: var(--retro-accent); text-align: center; margin: 0.75rem 0;"><strong>${{ product.price }}</strong></p>
+
+          {% if user.is_authenticated %}
+            {% if product.is_available %}
+              <form method="post" action="{% url 'mercado:add-to-cart' product.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn-retro btn-small" style="width: 100%; text-align: center; display: block;">🛒 Agregar al carrito</button>
+              </form>
+            {% else %}
+              <button class="btn-retro-secondary btn-small" style="width: 100%; text-align: center; display: block; opacity: 0.7; cursor: not-allowed;" disabled>Sin stock</button>
+            {% endif %}
+
+            {% if user == product.seller %}
+              <div style="margin-top:0.75rem; display: flex; gap: 0.5rem;">
+                <a href="{% url 'mercado:product-edit' product.id %}" class="btn-retro-secondary btn-small" style="flex: 1; text-align: center;">✏️ Editar</a>
+                <a href="{% url 'mercado:product-delete' product.id %}?next={{ request.get_full_path|urlencode }}" class="btn-retro-danger btn-small" style="flex: 1; text-align: center;">🗑️ Eliminar</a>
+              </div>
+            {% endif %}
+
+          {% else %}
+            <a href="{% url 'account_login' %}" class="btn-retro-secondary btn-small" style="width: 100%; text-align: center; display: block;">Inicia sesión para comprar</a>
+          {% endif %}
+        </div>
+      </div>
+    {% empty %}
+      <p style="text-align:center; grid-column: 1 / -1;">No hay productos disponibles.</p>
+    {% endfor %}
+  </div>
+
+  <div style="margin-top: 1.5rem; display: flex; justify-content: center; gap: 0.5rem; align-items: center;">
+    {% if page_obj.has_previous %}
+      <a class="btn-retro btn-small" href="{% if base_qs %}?{{ base_qs }}&page=1{% else %}?page=1{% endif %}">« Primera</a>
+      <a class="btn-retro btn-small" href="{% if base_qs %}?{{ base_qs }}&page={{ page_obj.previous_page_number }}{% else %}?page={{ page_obj.previous_page_number }}{% endif %}">Anterior</a>
+    {% endif %}
+    <span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+      <a class="btn-retro btn-small" href="{% if base_qs %}?{{ base_qs }}&page={{ page_obj.next_page_number }}{% else %}?page={{ page_obj.next_page_number }}{% endif %}">Siguiente</a>
+      <a class="btn-retro btn-small" href="{% if base_qs %}?{{ base_qs }}&page={{ page_obj.paginator.num_pages }}{% else %}?page={{ page_obj.paginator.num_pages }}{% endif %}">Última »</a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Modal para imagen completa -->
+<div id="imageModal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); padding: 20px;">
+  <span id="closeModal" style="position: absolute; top: 15px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; z-index: 10000;">&times;</span>
+  <img id="modalImage" style="margin: auto; display: block; max-width: 90%; max-height: 90%; object-fit: contain; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+</div>
+
+<script>
+(function() {
+  // Carrusel de imágenes
+  document.querySelectorAll('.product-carousel').forEach(carousel => {
+    const images = carousel.querySelectorAll('.carousel-image');
+    const indicators = carousel.querySelectorAll('.indicator');
+    const prevBtn = carousel.querySelector('.carousel-prev');
+    const nextBtn = carousel.querySelector('.carousel-next');
+    let currentIndex = 0;
+    
+    if (images.length <= 1) return; // No hay carrusel si solo hay una imagen
+    
+    function showImage(index) {
+      // Ocultar todas las imágenes
+      images.forEach(img => img.style.opacity = '0');
+      indicators.forEach(ind => {
+        ind.style.background = 'rgba(255,255,255,0.5)';
+        ind.classList.remove('active');
+      });
+      
+      // Mostrar imagen actual
+      images[index].style.opacity = '1';
+      images[index].classList.add('active');
+      indicators[index].style.background = 'white';
+      indicators[index].classList.add('active');
+      currentIndex = index;
+    }
+    
+    if (prevBtn) {
+      prevBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const newIndex = currentIndex > 0 ? currentIndex - 1 : images.length - 1;
+        showImage(newIndex);
+      });
+    }
+    
+    if (nextBtn) {
+      nextBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const newIndex = currentIndex < images.length - 1 ? currentIndex + 1 : 0;
+        showImage(newIndex);
+      });
+    }
+    
+    // Click en imagen para abrir modal
+    images.forEach(img => {
+      img.addEventListener('click', function(e) {
+        if (e.target === prevBtn || e.target === nextBtn) return;
+        const fullUrl = this.getAttribute('data-full-url');
+        const modal = document.getElementById('imageModal');
+        const modalImg = document.getElementById('modalImage');
+        modal.style.display = 'block';
+        modalImg.src = fullUrl;
+      });
+      img.style.cursor = 'pointer';
+    });
+  });
+  
+  // Modal de imagen
+  const modal = document.getElementById('imageModal');
+  const closeModal = document.getElementById('closeModal');
+  
+  if (closeModal) {
+    closeModal.addEventListener('click', function() {
+      modal.style.display = 'none';
+    });
+  }
+  
+  if (modal) {
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
+  }
+  
+  // Cerrar modal con ESC
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && modal.style.display === 'block') {
+      modal.style.display = 'none';
+    }
+  });
+  
+  // Reset al cargar página (asegurar que thumbnail sea la primera)
+  window.addEventListener('load', function() {
+    document.querySelectorAll('.product-carousel').forEach(carousel => {
+      const images = carousel.querySelectorAll('.carousel-image');
+      const indicators = carousel.querySelectorAll('.indicator');
+      if (images.length > 0) {
+        images.forEach(img => img.style.opacity = '0');
+        indicators.forEach(ind => {
+          ind.style.background = 'rgba(255,255,255,0.5)';
+          ind.classList.remove('active');
+        });
+        images[0].style.opacity = '1';
+        images[0].classList.add('active');
+        if (indicators[0]) {
+          indicators[0].style.background = 'white';
+          indicators[0].classList.add('active');
+        }
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

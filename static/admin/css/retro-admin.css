@@ -1,0 +1,505 @@
+/* ========================================
+   ADMIN RETRO - Panel de Administración
+   Estilo consistente con el tema retro principal
+   ======================================== */
+
+/* Variables del admin retro */
+:root {
+  --admin-bg: #8b9a99;
+  --admin-panel: #b8c5c4;
+  --admin-panel-light: #c8d5d4;
+  --admin-text: #2d3332;
+  --admin-text-light: #5a6968;
+  --admin-primary: #3e7d7d;
+  --admin-primary-dark: #2e5d5d;
+  --admin-accent: #e09b5d;
+  --admin-accent-hover: #d08545;
+  --admin-border: #6d7a79;
+  --admin-shadow: rgba(0, 0, 0, 0.3);
+}
+
+/* ========== BODY Y CONTENEDORES ========== */
+body {
+  background: var(--admin-bg) !important;
+  font-family: 'Georgia', 'Times New Roman', serif !important;
+  color: var(--admin-text) !important;
+}
+
+#container {
+  background: var(--admin-panel) !important;
+  border: 2px solid var(--admin-border) !important;
+  border-radius: 12px !important;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.2) !important;
+}
+
+#content {
+  background: var(--admin-panel-light) !important;
+  border-radius: 8px !important;
+  padding: 20px !important;
+}
+
+/* Sobrescribir TODOS los fondos blancos */
+div, section, article, aside,
+.dashboard #content,
+#content-main,
+.colM #content,
+.colMS #content {
+  background: transparent !important;
+}
+
+/* Forzar color de fondo gris en áreas blancas */
+.dashboard .module table,
+#content-main > div,
+.results,
+#result_list {
+  background: var(--admin-panel-light) !important;
+}
+
+/* ========== HEADER CON DEGRADADO AZUL/TURQUESA ========== */
+#header {
+  background: linear-gradient(135deg, #3e7d7d 0%, #2e5d5d 100%) !important;
+  border-bottom: 3px solid var(--admin-border) !important;
+  box-shadow: 0 3px 8px var(--admin-shadow) !important;
+  padding: 10px 20px !important;
+}
+
+#branding h1,
+#branding h1 a {
+  color: #ffffff !important;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.5) !important;
+  font-family: 'Georgia', serif !important;
+  font-weight: bold !important;
+}
+
+#user-tools {
+  color: #ffffff !important;
+}
+
+#user-tools a {
+  color: #e0f0f0 !important;
+  text-decoration: none !important;
+  padding: 0.3rem 0.6rem !important;
+  border-radius: 6px !important;
+  background: rgba(255,255,255,0.1) !important;
+  transition: all 0.2s !important;
+}
+
+#user-tools a:hover {
+  background: rgba(255,255,255,0.2) !important;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5) !important;
+}
+
+/* ========== MÓDULOS Y PANELES ========== */
+.module,
+.dashboard .module {
+  background: var(--admin-panel) !important;
+  border: 2px solid var(--admin-border) !important;
+  border-radius: 10px !important;
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.2) !important;
+  margin-bottom: 15px !important;
+}
+
+.module h2,
+.module caption,
+th {
+  background: linear-gradient(135deg, var(--admin-accent) 0%, var(--admin-accent-hover) 100%) !important;
+  color: #2d3332 !important;
+  border-radius: 8px 8px 0 0 !important;
+  padding: 10px 15px !important;
+  font-family: 'Georgia', serif !important;
+  text-shadow: 1px 1px 1px rgba(255,255,255,0.4) !important;
+  border-bottom: 2px solid var(--admin-border) !important;
+  font-weight: bold !important;
+}
+
+.module tr th a,
+.module caption a {
+  color: #1a2524 !important;
+  font-weight: bold !important;
+}
+
+.module tbody tr td a {
+  color: var(--admin-primary) !important;
+  font-weight: 500 !important;
+}
+
+/* ========== TABLAS ========== */
+table {
+  background: var(--admin-panel-light) !important;
+  border: 2px solid var(--admin-border) !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
+thead th {
+  background: linear-gradient(135deg, var(--admin-primary) 0%, var(--admin-primary-dark) 100%) !important;
+  color: #ffffff !important;
+  border-bottom: 2px solid var(--admin-border) !important;
+  padding: 10px !important;
+  text-align: left !important;
+  font-weight: bold !important;
+}
+
+thead th a {
+  color: #e0f0f0 !important;
+  font-weight: bold !important;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5) !important;
+}
+
+thead th a:hover {
+  color: #ffffff !important;
+}
+
+tbody tr {
+  background: rgba(255,255,255,0.6) !important;
+  border-bottom: 1px solid var(--admin-border) !important;
+}
+
+tbody tr:hover {
+  background: rgba(255,255,255,0.8) !important;
+}
+
+tbody tr:nth-child(even) {
+  background: rgba(255,255,255,0.4) !important;
+}
+
+tbody tr:nth-child(even):hover {
+  background: rgba(255,255,255,0.7) !important;
+}
+
+tbody tr td {
+  color: #2d3332 !important;
+}
+
+tbody tr td a {
+  color: #2e5d5d !important;
+  font-weight: 500 !important;
+}
+
+tbody tr td a:hover {
+  color: #1e4d4d !important;
+  text-decoration: underline !important;
+}
+
+/* ========== BOTONES ========== */
+.button,
+button,
+input[type="submit"],
+input[type="button"],
+.submit-row input,
+a.button {
+  background: var(--admin-accent) !important;
+  color: white !important;
+  border: 2px solid var(--admin-border) !important;
+  padding: 0.6rem 1.2rem !important;
+  border-radius: 8px !important;
+  font-size: 1rem !important;
+  font-family: 'Georgia', serif !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+  display: inline-block !important;
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.2) !important;
+  transition: all 0.2s !important;
+  text-align: center !important;
+}
+
+.button:hover,
+button:hover,
+input[type="submit"]:hover,
+input[type="button"]:hover,
+.submit-row input:hover,
+a.button:hover {
+  background: var(--admin-accent-hover) !important;
+  transform: translate(-1px, -1px) !important;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.3) !important;
+  color: white !important;
+}
+
+.button:active,
+button:active,
+input[type="submit"]:active {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.2) !important;
+}
+
+/* Botón primario/guardar */
+.default,
+.submit-row input.default {
+  background: linear-gradient(135deg, var(--admin-primary) 0%, var(--admin-primary-dark) 100%) !important;
+}
+
+.default:hover,
+.submit-row input.default:hover {
+  background: linear-gradient(135deg, var(--admin-primary-dark) 0%, #1e4d4d 100%) !important;
+}
+
+/* Botón eliminar */
+.deletelink,
+.deletelink-box a {
+  background: #a86464 !important;
+  border-color: #8b4b4b !important;
+}
+
+.deletelink:hover {
+  background: #944545 !important;
+}
+
+/* ========== FORMULARIOS ========== */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="url"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+textarea,
+select {
+  background: rgba(255,255,255,0.8) !important;
+  border: 2px solid var(--admin-border) !important;
+  border-radius: 6px !important;
+  padding: 0.6rem !important;
+  font-family: 'Georgia', serif !important;
+  font-size: 1rem !important;
+  box-shadow: inset 2px 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+input[type="url"]:focus,
+input[type="number"]:focus,
+textarea:focus,
+select:focus {
+  background: white !important;
+  border-color: var(--admin-primary) !important;
+  outline: none !important;
+}
+
+/* ========== BREADCRUMBS ========== */
+.breadcrumbs {
+  background: var(--admin-panel) !important;
+  border: 2px solid var(--admin-border) !important;
+  border-radius: 8px !important;
+  padding: 10px 15px !important;
+  margin-bottom: 15px !important;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.1) !important;
+  color: #2d3332 !important;
+}
+
+.breadcrumbs a {
+  color: #2e5d5d !important;
+  text-decoration: none !important;
+  font-weight: bold !important;
+}
+
+.breadcrumbs a:hover {
+  text-decoration: underline !important;
+  color: #1e4d4d !important;
+}
+
+/* ========== MENSAJES ========== */
+.messagelist {
+  margin-bottom: 15px !important;
+}
+
+.messagelist li {
+  background: var(--admin-panel) !important;
+  border: 2px solid var(--admin-border) !important;
+  border-radius: 8px !important;
+  padding: 10px 15px !important;
+  margin-bottom: 10px !important;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.1) !important;
+}
+
+.messagelist .success {
+  border-left: 4px solid #6b8b6b !important;
+}
+
+.messagelist .warning {
+  border-left: 4px solid #e09b5d !important;
+}
+
+.messagelist .error {
+  border-left: 4px solid #a86464 !important;
+}
+
+/* ========== ENLACES ========== */
+a {
+  color: #2e5d5d !important;
+  text-decoration: none !important;
+  font-weight: 500 !important;
+}
+
+a:hover {
+  text-decoration: underline !important;
+  color: #1e4d4d !important;
+}
+
+/* Enlaces de acción (Agregar, Modificar, etc) */
+.addlink,
+.changelink,
+.viewlink {
+  color: #2e5d5d !important;
+  font-weight: bold !important;
+}
+
+.addlink:hover,
+.changelink:hover,
+.viewlink:hover {
+  color: #1e4d4d !important;
+}
+
+/* ========== PAGINACIÓN ========== */
+.paginator {
+  background: var(--admin-panel) !important;
+  border: 2px solid var(--admin-border) !important;
+  border-radius: 8px !important;
+  padding: 10px !important;
+  margin-top: 15px !important;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.1) !important;
+}
+
+.paginator a {
+  background: var(--admin-accent) !important;
+  color: white !important;
+  border: 2px solid var(--admin-border) !important;
+  padding: 0.4rem 0.8rem !important;
+  border-radius: 6px !important;
+  margin: 0 2px !important;
+  display: inline-block !important;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.2) !important;
+  transition: all 0.2s !important;
+}
+
+.paginator a:hover {
+  background: var(--admin-accent-hover) !important;
+  text-decoration: none !important;
+  transform: translate(-1px, -1px) !important;
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.3) !important;
+}
+
+/* ========== FOOTER ========== */
+#footer {
+  background: linear-gradient(135deg, var(--admin-primary) 0%, var(--admin-primary-dark) 100%) !important;
+  color: #ffffff !important;
+  border-top: 3px solid var(--admin-border) !important;
+  padding: 15px !important;
+  text-align: center !important;
+  margin-top: 20px !important;
+  border-radius: 0 0 8px 8px !important;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.3) !important;
+}
+
+/* ========== FORMULARIO DE LOGIN ========== */
+body.login {
+  background: var(--admin-bg) !important;
+}
+
+#login {
+  background: var(--admin-panel) !important;
+  border: 2px solid var(--admin-border) !important;
+  border-radius: 12px !important;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.2) !important;
+}
+
+#login #header {
+  border-radius: 10px 10px 0 0 !important;
+}
+
+#login form {
+  background: var(--admin-panel-light) !important;
+  padding: 20px !important;
+}
+
+#login .form-row {
+  margin-bottom: 15px !important;
+}
+
+#login .form-row label {
+  color: var(--admin-text) !important;
+}
+
+#login .submit-row {
+  background: transparent !important;
+  border: none !important;
+  padding: 15px 0 0 0 !important;
+}
+
+/* Forzar fondo en contenedor de login */
+#content {
+  background: transparent !important;
+}
+
+body.login #container {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* ========== ACCIONES ========== */
+.actions {
+  background: var(--admin-panel) !important;
+  border: 2px solid var(--admin-border) !important;
+  border-radius: 8px !important;
+  padding: 10px !important;
+  margin-bottom: 15px !important;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.1) !important;
+}
+
+.actions select {
+  background: rgba(255,255,255,0.9) !important;
+}
+
+/* ========== FILTROS ========== */
+#changelist-filter {
+  background: var(--admin-panel) !important;
+  border: 2px solid var(--admin-border) !important;
+  border-radius: 10px !important;
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.2) !important;
+}
+
+#changelist-filter h2 {
+  background: linear-gradient(135deg, var(--admin-primary) 0%, var(--admin-primary-dark) 100%) !important;
+  color: #ffffff !important;
+  font-weight: bold !important;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5) !important;
+}
+
+#changelist-filter li {
+  border-bottom: 1px solid var(--admin-border) !important;
+}
+
+#changelist-filter li a {
+  color: #2d3332 !important;
+  font-weight: 500 !important;
+}
+
+#changelist-filter li a:hover {
+  color: #1e4d4d !important;
+}
+
+#changelist-filter li.selected a {
+  background: var(--admin-accent) !important;
+  color: #2d3332 !important;
+  border-radius: 6px !important;
+  padding: 5px 10px !important;
+  font-weight: bold !important;
+  text-shadow: 1px 1px 1px rgba(255,255,255,0.3) !important;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+  #header {
+    padding: 10px !important;
+  }
+  
+  #content {
+    padding: 10px !important;
+  }
+  
+  .module h2,
+  thead th {
+    font-size: 1rem !important;
+    padding: 8px !important;
+  }
+}

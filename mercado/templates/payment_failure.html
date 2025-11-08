@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Pago fallido{% endblock %}
+{% block content %}
+<div class="container" style="max-width: 700px; margin: 2rem auto;">
+  <div class="retro-panel" style="text-align:center;">
+    <h2>El pago no se pudo completar</h2>
+    <p>Tu transacción fue cancelada o rechazada. Podés intentar nuevamente.</p>
+    <a href="{% url 'mercado:view-cart' %}" class="btn-retro">Volver al carrito</a>
+  </div>
+</div>
+{% endblock %}

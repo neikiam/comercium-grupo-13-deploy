@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Confirmar baneo de usuario{% endblock %}
+{% block content %}
+<div class="container" style="max-width: 700px; margin: 2rem auto;">
+  <div class="retro-panel" style="border: 3px solid #e53935;">
+    <h2 style="color: #e53935; margin-bottom: 1.5rem; text-align: center;">⚠️ CONFIRMAR BANEO DE USUARIO</h2>
+    
+    <div style="background: #ffebee; padding: 1rem; border: 2px solid #e53935; margin-bottom: 1.5rem;">
+      <p style="margin: 0; font-weight: bold; color: #c62828;">
+        Esta acción es PERMANENTE e IRREVERSIBLE
+      </p>
+    </div>
+
+    <div style="margin-bottom: 1.5rem;">
+      <h3 style="margin-bottom: 0.5rem;">Usuario a banear:</h3>
+      <div style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: #f5f5f5; border: 2px solid var(--retro-border);">
+        {% if target_user.profile.avatar %}
+          <img src="{{ target_user.profile.avatar.url }}" alt="{{ target_user.username }}" style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--retro-border);">
+        {% else %}
+          <img src="https://ui-avatars.com/api/?name={{ target_user.username }}&background=random&size=60" alt="{{ target_user.username }}" style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--retro-border);">
+        {% endif %}
+        <div>
+          <strong style="font-size: 1.2rem;">{{ target_user.username }}</strong>
+          <br>
+          <span style="color: #666;">{{ target_user.email }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 1.5rem;">
+      <h3 style="margin-bottom: 0.5rem;">Consecuencias del baneo:</h3>
+      <ul style="line-height: 1.8;">
+        <li>✖ La cuenta de usuario será <strong>eliminada permanentemente</strong></li>
+        <li>✖ Se eliminarán <strong>{{ product_count }} producto(s)</strong> activo(s)</li>
+        <li>✖ Se eliminarán todos los datos asociados (perfil, mensajes, etc.)</li>
+        <li>✖ El usuario NO podrá recuperar su cuenta</li>
+        <li>✖ Esta acción quedará registrada en los logs del sistema</li>
+      </ul>
+    </div>
+
+    <div style="background: #fff3cd; padding: 1rem; border: 2px solid #ffc107; margin-bottom: 1.5rem;">
+      <p style="margin: 0; color: #856404;">
+        <strong>⚠️ Importante:</strong> Asegúrate de que esta decisión está justificada. 
+        El baneo debe usarse solo en casos de violaciones graves de las políticas de la plataforma.
+      </p>
+    </div>
+
+    <form method="post" action="{% url 'perfil:ban_user' target_user.id %}">
+      {% csrf_token %}
+      <div style="display: flex; gap: 1rem; justify-content: center;">
+        <a href="{% url 'perfil:user_profile_view' target_user.id %}" class="btn-retro" style="flex: 1; text-align: center; background: #6c757d;">
+          ← Cancelar
+        </a>
+        <button type="submit" class="btn-retro" style="flex: 1; background: #e53935; border-color: #c62828;" onclick="return confirm('¿Estás COMPLETAMENTE seguro de que deseas banear a este usuario? Esta acción NO se puede deshacer.');">
+          🚫 BANEAR USUARIO
+        </button>
+      </div>
+    </form>
+
+    <div style="margin-top: 1.5rem; padding: 0.75rem; background: #e3f2fd; border: 2px solid #2196f3; font-size: 0.9rem;">
+      <strong>Nota de moderador:</strong> Tu ID de usuario ({{ request.user.username }}) quedará registrado en los logs del sistema como responsable de esta acción.
+    </div>
+  </div>
+</div>
+{% endblock %}

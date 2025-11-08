@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Eliminar producto{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 500px; margin: 3rem auto;">
+    <div class="retro-panel" style="text-align: center; background: #f5e6e6;">
+        <h2 style="color: #d9534f; margin-bottom: 1rem;">Eliminar producto</h2>
+        
+        {% if is_moderator_action %}
+          <div style="background: #fff3cd; padding: 0.75rem; border: 2px solid #ffc107; margin-bottom: 1rem;">
+            <p style="margin: 0; color: #856404; font-weight: bold;">
+              🛡️ Acción de Moderador
+            </p>
+            <p style="margin: 0.5rem 0 0 0; color: #856404; font-size: 0.9rem;">
+              Producto de: <strong>{{ product.seller.username }}</strong>
+            </p>
+          </div>
+        {% endif %}
+        
+        <p style="color: #555; margin-bottom: 1.5rem; font-size: 1rem;">¿Seguro querés eliminar "<strong>{{ product.title }}</strong>"?</p>
+        <form method="post" style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+            {% csrf_token %}
+            {% if next_url %}
+                <input type="hidden" name="next" value="{{ next_url }}">
+            {% endif %}
+            <button type="submit" class="btn-retro-danger">🗑️ Sí, eliminar</button>
+            <a href="{% if next_url %}{{ next_url }}{% else %}javascript:history.back(){% endif %}" class="btn-retro-secondary">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

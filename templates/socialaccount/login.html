@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load socialaccount %}
+{% block title %}Iniciar sesión{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 500px; margin: 2rem auto;">
+  <div class="retro-panel">
+    <h2 style="text-align: center; margin-bottom: 1.5rem;">Iniciar sesión</h2>
+
+    <form method="POST" action="{% url 'account_login' %}" class="form-retro">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit" class="btn-retro" style="width: 100%;">Entrar</button>
+    </form>
+
+    <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--retro-border);">
+    <div style="text-align: center;">
+      <p style="margin-bottom: 1rem;">O inicia sesión con:</p>
+      <a href="{% provider_login_url 'google' %}" class="btn-retro btn-small" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+        <i class="fab fa-google"></i> Iniciar con Google
+      </a>
+    </div>
+
+    <p style="margin-top: 1.5rem; text-align: center;">
+      ¿No tenés cuenta?
+      <a href="{% url 'account_signup' %}">Registrate</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

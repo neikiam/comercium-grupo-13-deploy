@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="max-width: 550px; margin: 2rem auto;">
+  <div class="retro-panel">
+    <h2 style="text-align: center; margin-bottom: 1.5rem;">Editar perfil</h2>
+
+    <!-- Avatar clickeable -->
+    <div style="text-align: center; margin-bottom: 2rem;">
+      <label for="id_avatar" style="cursor: pointer; display: inline-block;">
+        <div style="position: relative; display: inline-block;">
+          {% if request.user.profile.avatar %}
+            <img id="avatar-preview" src="{{ request.user.profile.avatar.url }}" alt="Avatar" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--retro-accent); box-shadow: 3px 3px 8px rgba(0,0,0,0.15); transition: opacity 0.3s;">
+          {% else %}
+            <img id="avatar-preview" src="https://ui-avatars.com/api/?name={{ request.user.username|urlencode }}&background=random&size=120" alt="Avatar" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--retro-accent); box-shadow: 3px 3px 8px rgba(0,0,0,0.15); transition: opacity 0.3s;">
+          {% endif %}
+          <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s;" id="avatar-overlay">
+            <span style="color: white; font-size: 2rem;">📷</span>
+          </div>
+        </div>
+      </label>
+      <p style="color: #666; font-size: 0.9rem; margin-top: 0.5rem; margin-bottom: 0.5rem;">Click en la foto para cambiarla</p>
+      
+      <!-- Botón para eliminar (solo si hay avatar) - FUERA del formulario principal -->
+      {% if request.user.profile.avatar %}
+        <form method="post" action="{% url 'perfil:delete_avatar' %}" style="display: inline-block; margin-top: 0.5rem;">
+          {% csrf_token %}
+          <button type="submit" class="btn-retro-danger btn-small" onclick="return confirm('¿Eliminar tu foto de perfil?');">🗑️ Eliminar foto</button>
+        </form>
+      {% endif %}
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" class="form-retro" id="profile-form">
+      {% csrf_token %}
+      
+      <!-- Input file oculto -->
+      <input type="file" id="id_avatar" name="avatar" accept="image/*" style="display: none;">
+
+      <!-- Resto de campos -->
+      {% for field in form %}
+        {% if field.name != 'avatar' %}
+          <div style="margin-bottom: 1rem;">
+            {{ field.label_tag }}
+            {{ field }}
+            {% if field.help_text %}
+              <small style="color: #666; font-size: 0.85rem;">{{ field.help_text }}</small>
+            {% endif %}
+            {% for error in field.errors %}
+              <div style="color: #d9534f; font-size: 0.85rem;">{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endfor %}
+
+      <button type="submit" class="btn-retro" style="width: 100%; margin-top: 1rem;">Guardar cambios</button>
+      <a href="{% url 'perfil:profile_view' %}" class="btn-retro-secondary" style="width: 100%; margin-top: 0.5rem; display: block; text-align: center; text-decoration: none;">Cancelar</a>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Hover effect en el avatar
+  const avatarPreview = document.getElementById('avatar-preview');
+  const avatarOverlay = document.getElementById('avatar-overlay');
+  const avatarLabel = document.querySelector('label[for="id_avatar"]');
+  
+  if (avatarLabel) {
+    avatarLabel.addEventListener('mouseenter', () => {
+      avatarOverlay.style.opacity = '1';
+    });
+    
+    avatarLabel.addEventListener('mouseleave', () => {
+      avatarOverlay.style.opacity = '0';
+    });
+  }
+
+  // Preview de la imagen seleccionada
+  const avatarInput = document.getElementById('id_avatar');
+  
+  if (avatarInput) {
+    avatarInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          avatarPreview.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+</script>
+{% endblock %}

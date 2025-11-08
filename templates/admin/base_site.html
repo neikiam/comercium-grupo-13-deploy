@@ -1,0 +1,31 @@
+{% extends "admin/base.html" %}
+
+{% load static %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    <link rel="stylesheet" type="text/css" href="{% static 'admin/css/retro-admin.css' %}">
+    <style>
+        body, #container, #content, #content-main, .colM, .colMS {
+            background: #8b9a99 !important;
+        }
+        #content, #content-main {
+            background: #c8d5d4 !important;
+        }
+    </style>
+{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">
+    <a href="{% url 'admin:index' %}">
+        🏪 COMERCIUM Admin
+    </a>
+</h1>
+{% endblock %}
+
+{% block footer %}
+<div id="footer">
+    Comercium - Panel de Administración Retro | 
+    Powered by Django {% if user.is_authenticated %}| Usuario: {{ user.username }}{% endif %}
+</div>
+{% endblock %}

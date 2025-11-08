@@ -1,0 +1,8 @@
+staticfiles/** linguist-vendored
+staticfiles/** linguist-generated=true
+
+**/*.min.js linguist-generated=true
+**/*.min.css linguist-generated=true
+**/*.map linguist-generated=true
+
+**/vendor/** linguist-vendored

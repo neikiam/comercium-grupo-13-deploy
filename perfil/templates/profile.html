@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ profile.user.username }} - Perfil{% endblock %}
+
+{% block content %}
+<div class="container" style="margin-top: 2rem; margin-bottom: 2rem;">
+  <div class="retro-panel" style="text-align: center; padding: 2rem;">
+    {% if profile.avatar %}
+      <img src="{{ profile.avatar.url }}" alt="{{ profile.user.username }}" style="width: 120px; height: 120px; border-radius: 50%; border: 3px solid var(--retro-border); margin-bottom: 1rem;">
+    {% else %}
+      <img src="https://ui-avatars.com/api/?name={{ profile.user.username|urlencode }}&size=120&background=random" alt="{{ profile.user.username }}" style="width: 120px; height: 120px; border-radius: 50%; border: 3px solid var(--retro-border); margin-bottom: 1rem;">
+    {% endif %}
+    
+    <h1 style="margin-bottom: 0.5rem;">{{ profile.user.username }}</h1>
+    <p style="color: #666; margin-bottom: 1rem;">{{ profile.bio|default:"Sin biografía" }}</p>
+    
+    {% if profile.website %}
+      <p style="margin-bottom: 1rem;">
+        <a href="{{ profile.website }}" target="_blank" rel="noopener" style="color: var(--retro-accent);">🌐 {{ profile.website }}</a>
+      </p>
+    {% endif %}
+    
+    {% if is_own_profile %}
+      <a href="{% url 'perfil:edit_profile' %}" class="btn-retro">✏️ Editar perfil</a>
+    {% else %}
+      <a href="{% url 'chat_interno:private-start' profile.user.id %}" class="btn-retro">💬 Mensaje privado</a>
+      
+      {% if request.user.is_staff or request.user.is_superuser %}
+        <div style="margin-top: 1rem; padding: 1rem; background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px;">
+          <p style="margin: 0 0 0.75rem 0; font-weight: bold; color: #856404;">🛡️ Panel de Moderación</p>
+          <a href="{% url 'perfil:ban_user_confirm' profile.user.id %}" class="btn-retro" style="background: #e53935; border-color: #c62828;">
+            🚫 Banear usuario
+          </a>
+        </div>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <div style="margin-top: 2rem;">
+    <h2 style="text-align: center; margin-bottom: 1.5rem;">
+      {% if is_own_profile %}Mis productos{% else %}Productos de {{ profile.user.username }}{% endif %}
+    </h2>
+    
+    {% if user_products %}
+      <div class="grid-retro">
+        {% for product in user_products %}
+          <div class="card-retro">
+            {% if product.image %}
+              <div class="thumb-box-200">
+                <img src="{{ product.image.url }}" alt="{{ product.title }}" loading="lazy">
+              </div>
+            {% else %}
+              <div class="thumb-box-200" style="background:#f2f2f2; color:#999;">Sin imagen</div>
+            {% endif %}
+            <div style="padding: 1rem;">
+              {% if product.stock <= 0 %}
+                <span style="display:inline-block; background: #f44336; color: #fff; padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.8rem; margin-bottom: 0.5rem;">Sin stock</span>
+              {% elif product.stock <= 5 %}
+                <span style="display:inline-block; background: #ff9800; color: #fff; padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.8rem; margin-bottom: 0.5rem;">Pocas unidades</span>
+              {% endif %}
+              <h3 style="margin: 0.5rem 0; font-size: 1.1rem; text-align: center;">
+                <a href="{% url 'mercado:product-detail' product.id %}" style="color: inherit; text-decoration: none;">{{ product.title }}</a>
+              </h3>
+              <p style="font-size: 1.1rem; font-weight: bold; color: var(--retro-accent); text-align: center; margin: 0.75rem 0;">${{ product.price }}</p>
+              
+              {% if is_own_profile %}
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                  <a href="{% url 'mercado:product-edit' product.id %}" class="btn-retro-secondary btn-small" style="flex: 1; text-align: center;">✏️ Editar</a>
+                  <a href="{% url 'mercado:product-delete' product.id %}?next={{ request.get_full_path|urlencode }}" class="btn-retro-danger btn-small" style="flex: 1; text-align: center;">🗑️ Eliminar</a>
+                </div>
+              {% else %}
+                <a href="{% url 'mercado:product-detail' product.id %}" class="btn-retro btn-small" style="width: 100%; text-align: center; display: block;">Ver detalles</a>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="text-align: center; color: #666; margin-top: 2rem;">
+        {% if is_own_profile %}No has publicado productos aún.{% else %}Este usuario no tiene productos publicados.{% endif %}
+      </p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

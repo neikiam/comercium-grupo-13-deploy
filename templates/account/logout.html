@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load socialaccount %}
+
+{% block title %}Salir{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 400px; margin: 3rem auto;">
+  <div class="retro-panel" style="text-align: center;">
+    <h2 style="margin-bottom: 1.5rem;">¿Seguro querés salir?</h2>
+    <form method="post" style="display: inline-block;">
+      {% csrf_token %}
+      <button type="submit" class="btn-retro-danger" style="margin-right: 0.75rem;">Salir</button>
+      <a href="{% url 'home' %}" class="btn-retro">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

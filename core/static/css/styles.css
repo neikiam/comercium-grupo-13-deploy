@@ -1,0 +1,105 @@
+/* Contenedor que centra el login */
+.auth-wrapper {
+  display: flex;
+  justify-content: center; /* horizontal */
+  align-items: center;     /* vertical */
+  min-height: 100vh;       /* altura completa de la pantalla */
+  background: #f0f2f5;     /* fondo suave */
+}
+
+/* Tarjeta del login */
+.auth-container {
+  width: 100%;
+  max-width: 400px;
+  padding: 35px 25px;
+  background: #fff;
+  border-radius: 25px;      /* bordes redondeados */
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  text-align: center;
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+/* Inputs */
+.form-group input {
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: 12px;
+  border: 1px solid #ccc;
+  font-size: 15px;
+  margin-bottom: 18px;
+}
+
+/* Botón de login */
+.btn-login {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  background: #007bff;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-login:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 15px rgba(0,123,255,0.4);
+}
+
+/* Divider */
+.divider {
+  color: #888;
+  font-size: 14px;
+  display: flex;
+  text-align: center;
+  margin: 10px;
+}
+
+.divider::before,
+.divider::after {
+  flex: 1;
+  content: "";
+  background-color: #b3b2b2;
+  margin: 10px;
+}
+
+
+.divider::before { left: 0; }
+.divider::after { right: 0; }
+
+/* Login social */
+.social-login {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.btn-social {
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  font-size: 26px;
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-decoration: none;
+}
+
+.btn-social.google { background: #DB4437; }
+
+.btn-social:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+
+/* Animación */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

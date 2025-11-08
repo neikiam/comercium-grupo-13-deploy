@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Solicitudes de chat{% endblock %}
+{% block content %}
+<div class="container" style="max-width: 900px; margin: 2rem auto;">
+  <h2 style="margin-bottom: 1rem; text-align:center;">Solicitudes de chat</h2>
+  <p style="text-align:center; margin-bottom: 1rem;"><a class="btn-retro btn-small" href="{% url 'chat_interno:home' %}">⬅ Volver al centro</a></p>
+
+  <div class="retro-panel" style="margin-bottom: 1rem;">
+    <h3>Recibidas</h3>
+    {% if incoming %}
+      <ul style="list-style:none; padding:0; margin:0;">
+        {% for cr in incoming %}
+          <li style="padding:0.75rem 0; border-bottom:1px solid var(--retro-border); display:flex; align-items:center; gap:0.75rem;">
+            {% if cr.requester.profile.avatar %}
+              <img src="{{ cr.requester.profile.avatar.url }}" alt="{{ cr.requester.username }}" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--retro-border);">
+            {% else %}
+              <img src="https://ui-avatars.com/api/?name={{ cr.requester.username }}&background=random&size=40" alt="{{ cr.requester.username }}" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--retro-border);">
+            {% endif %}
+            <a href="{% url 'perfil:user_profile_view' cr.requester.id %}" class="nav-link-retro" style="flex:1;">👤 {{ cr.requester.username }}</a>
+            <form method="post" action="{% url 'chat_interno:request-accept' cr.id %}">
+              {% csrf_token %}
+              <button class="btn-retro btn-small" type="submit">✅ Aceptar</button>
+            </form>
+            <form method="post" action="{% url 'chat_interno:request-decline' cr.id %}">
+              {% csrf_token %}
+              <button class="btn-retro btn-small" type="submit">❌ Rechazar</button>
+            </form>
+            <form method="post" action="{% url 'chat_interno:block-user' cr.requester.id %}">
+              {% csrf_token %}
+              <button class="btn-retro btn-small" type="submit">🚫 Bloquear</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p style="margin:0; color:#666;">No tienes solicitudes recibidas.</p>
+    {% endif %}
+  </div>
+
+  <div class="retro-panel">
+    <h3>Enviadas</h3>
+    {% if outgoing %}
+      <ul style="list-style:none; padding:0; margin:0;">
+        {% for cr in outgoing %}
+          <li style="padding:0.75rem 0; border-bottom:1px solid var(--retro-border); display:flex; align-items:center; gap:0.75rem;">
+            {% if cr.target.profile.avatar %}
+              <img src="{{ cr.target.profile.avatar.url }}" alt="{{ cr.target.username }}" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--retro-border);">
+            {% else %}
+              <img src="https://ui-avatars.com/api/?name={{ cr.target.username }}&background=random&size=40" alt="{{ cr.target.username }}" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--retro-border);">
+            {% endif %}
+            <a href="{% url 'perfil:user_profile_view' cr.target.id %}" class="nav-link-retro" style="flex:1;">👤 {{ cr.target.username }}</a>
+            <span style="color:#999;">Pendiente…</span>
+            <form method="post" action="{% url 'chat_interno:block-user' cr.target.id %}">
+              {% csrf_token %}
+              <button class="btn-retro btn-small" type="submit">🚫 Bloquear</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p style="margin:0; color:#666;">No tienes solicitudes enviadas.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

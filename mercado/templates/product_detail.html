@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}{{ product.title }} • Detalle{% endblock %}
+
+{% block content %}
+<div class="container" style="margin-top: 2rem; margin-bottom: 2rem;">
+  <div class="retro-panel">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+      <!-- Galería de imágenes estilo MercadoLibre -->
+      <div>
+        <div style="display: flex; gap: 1rem;">
+          <!-- Miniaturas verticales a la izquierda -->
+          <div style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 400px; overflow-y: auto;">
+            {% if product.image %}
+              <div class="thumbnail-item active" data-image-url="{{ product.image.url }}" style="width: 60px; height: 60px; border: 2px solid var(--retro-accent); border-radius: 4px; overflow: hidden; cursor: pointer; flex-shrink: 0;">
+                <img src="{{ product.image.url }}" alt="{{ product.title }}" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy">
+              </div>
+            {% endif %}
+            {% for img in product.images.all %}
+              <div class="thumbnail-item" data-image-url="{{ img.image.url }}" style="width: 60px; height: 60px; border: 2px solid #ddd; border-radius: 4px; overflow: hidden; cursor: pointer; flex-shrink: 0; transition: border-color 0.2s;">
+                <img src="{{ img.image.url }}" alt="{{ product.title }}" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy">
+              </div>
+            {% endfor %}
+          </div>
+          
+          <!-- Imagen principal grande a la derecha -->
+          <div style="flex: 1; position: relative;">
+            <div id="mainImageContainer" style="width: 100%; height: 400px; border: 2px solid var(--retro-border); border-radius: 8px; overflow: hidden; background: #f5f5f5; display: flex; align-items: center; justify-content: center; cursor: zoom-in;">
+              {% if product.image %}
+                <img id="mainImage" src="{{ product.image.url }}" alt="{{ product.title }}" style="max-width: 100%; max-height: 100%; object-fit: contain;" loading="lazy">
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Información del producto -->
+      <div>
+        <h2 style="margin-bottom: 0.5rem;">{{ product.title }}</h2>
+  <p style="color: #666; margin-bottom: 1rem;">Marca: {{ product.marca }} · Categoría: {{ product.get_category_display }}</p>
+        <h3 style="color: var(--retro-accent); margin-bottom: 1rem;">${{ product.price }}</h3>
+        <p style="margin-bottom: 1rem;">{{ product.description }}</p>
+        
+        <p style="margin-bottom: 1.5rem; color: #555;">
+          <strong>Vendedor:</strong> 
+          <a href="{% url 'perfil:user_profile_view' product.seller.id %}" style="color: var(--retro-accent);">{{ product.seller.username }}</a>
+          {% if user != product.seller and user.is_authenticated %}
+            <a href="{% url 'chat_interno:private-start' product.seller.id %}" class="btn-retro" style="margin-left: 0.5rem; font-size: 0.85rem; padding: 0.3rem 0.8rem;">💬 Contactar</a>
+          {% endif %}
+        </p>
+        
+        {% if user == product.seller %}
+          <div style="display:flex; gap:0.5rem; margin-top:0.75rem;">
+            <a href="{% url 'mercado:product-edit' product.id %}" class="btn-retro-secondary">✏️ Editar</a>
+            <a href="{% url 'mercado:product-delete' product.id %}?next={% url 'perfil:profile_view' %}" class="btn-retro-danger">🗑️ Eliminar</a>
+          </div>
+        {% else %}
+          {% if product.is_available %}
+            <form method="post" action="{% url 'mercado:add-to-cart' product.id %}">
+              {% csrf_token %}
+              <button type="submit" class="btn-retro">🛒 Agregar al carrito</button>
+            </form>
+          {% else %}
+            <span style="display:inline-block; background: #f44336; color: #fff; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.9rem;">Sin stock</span>
+          {% endif %}
+          
+          {% if user.is_staff or user.is_superuser %}
+            <div style="margin-top: 1rem; padding: 1rem; background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px;">
+              <p style="margin: 0 0 0.5rem 0; font-weight: bold; color: #856404; font-size: 0.9rem;">🛡️ Panel de Moderación</p>
+              <a href="{% url 'mercado:product-delete' product.id %}?next={{ request.get_full_path|urlencode }}" class="btn-retro" style="background: #e53935; border-color: #c62828; font-size: 0.9rem;">
+                🗑️ Eliminar producto
+              </a>
+            </div>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para imagen completa -->
+<div id="imageModal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9);">
+  <span id="closeModal" style="position: absolute; top: 15px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; z-index: 10000;">&times;</span>
+  <img id="modalImage" style="margin: auto; display: block; max-width: 95%; max-height: 95%; object-fit: contain; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+</div>
+
+<script>
+(function() {
+  const mainImage = document.getElementById('mainImage');
+  const mainContainer = document.getElementById('mainImageContainer');
+  const thumbnails = document.querySelectorAll('.thumbnail-item');
+  const modal = document.getElementById('imageModal');
+  const modalImg = document.getElementById('modalImage');
+  const closeModalBtn = document.getElementById('closeModal');
+  
+  // Cambiar imagen principal al hacer click en miniatura
+  thumbnails.forEach(thumbnail => {
+    thumbnail.addEventListener('click', function() {
+      const imageUrl = this.getAttribute('data-image-url');
+      if (mainImage) {
+        mainImage.src = imageUrl;
+      }
+      
+      // Actualizar borde activo
+      thumbnails.forEach(t => {
+        t.style.borderColor = '#ddd';
+        t.classList.remove('active');
+      });
+      this.style.borderColor = 'var(--retro-accent)';
+      this.classList.add('active');
+    });
+    
+    // Hover effect
+    thumbnail.addEventListener('mouseenter', function() {
+      if (!this.classList.contains('active')) {
+        this.style.borderColor = '#999';
+      }
+    });
+    thumbnail.addEventListener('mouseleave', function() {
+      if (!this.classList.contains('active')) {
+        this.style.borderColor = '#ddd';
+      }
+    });
+  });
+  
+  // Click en imagen principal para abrir modal
+  if (mainContainer) {
+    mainContainer.addEventListener('click', function() {
+      if (mainImage && mainImage.src) {
+        modal.style.display = 'block';
+        modalImg.src = mainImage.src;
+      }
+    });
+  }
+  
+  // Cerrar modal
+  if (closeModalBtn) {
+    closeModalBtn.addEventListener('click', function() {
+      modal.style.display = 'none';
+    });
+  }
+  
+  if (modal) {
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
+  }
+  
+  // Cerrar modal con ESC
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && modal.style.display === 'block') {
+      modal.style.display = 'none';
+    }
+  });
+})();
+</script>
+{% endblock %}

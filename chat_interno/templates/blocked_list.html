@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Usuarios bloqueados{% endblock %}
+{% block content %}
+<div class="container" style="max-width: 800px; margin: 2rem auto;">
+  <h2 style="margin-bottom: 1rem; text-align:center;">Usuarios bloqueados</h2>
+  <p style="text-align:center; margin-bottom: 1rem;"><a class="btn-retro btn-small" href="{% url 'chat_interno:home' %}">⬅ Volver al centro</a></p>
+  <div class="retro-panel">
+    {% if blocks %}
+      <ul style="list-style:none; padding:0; margin:0;">
+        {% for b in blocks %}
+          <li style="padding:0.75rem 0; border-bottom:1px solid var(--retro-border); display:flex; align-items:center; gap:0.75rem;">
+            {% if b.blocked.profile.avatar %}
+              <img src="{{ b.blocked.profile.avatar.url }}" alt="{{ b.blocked.username }}" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--retro-border);">
+            {% else %}
+              <img src="https://ui-avatars.com/api/?name={{ b.blocked.username }}&background=random&size=40" alt="{{ b.blocked.username }}" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--retro-border);">
+            {% endif %}
+            <a href="{% url 'perfil:user_profile_view' b.blocked.id %}" class="nav-link-retro" style="flex:1;">👤 {{ b.blocked.username }}</a>
+            <form method="post" action="{% url 'chat_interno:unblock-user' b.blocked.id %}">
+              {% csrf_token %}
+              <button class="btn-retro btn-small" type="submit">🔓 Desbloquear</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p style="margin:0; color:#666;">No has bloqueado a ningún usuario.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

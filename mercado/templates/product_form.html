@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+{% block title %}{% if form.instance.pk %}Editar producto{% else %}Nuevo producto{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 700px; margin: 2rem auto;">
+  <div class="retro-panel">
+    <h2 style="text-align:center; margin-bottom:1.5rem;">
+      {% if form.instance.pk %}✏️ Editar producto{% else %}➕ Publicar nuevo producto{% endif %}
+    </h2>
+    
+    <p style="text-align: center; color: #666; margin-bottom: 1.5rem; font-size: 0.9rem;">
+      Los campos marcados con <strong>*</strong> son obligatorios.
+      {% if is_edit %}
+        <span style="color: #f57c00; font-weight: bold;">⚠️ El título no puede ser modificado.</span>
+      {% endif %}
+    </p>
+
+    <form method="post" enctype="multipart/form-data" class="form-retro" id="product-form">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div style="background: #ffebee; border: 1px solid #ef5350; border-radius: 6px; padding: 0.75rem; margin-bottom: 1rem;">
+          {% for error in form.non_field_errors %}
+            <p style="margin: 0; color: #c62828;">{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <!-- Imagen principal con preview -->
+      <div style="margin-bottom: 2rem; text-align: center;">
+        <label style="display: block; font-weight: bold; margin-bottom: 0.5rem;">
+          {{ form.image.label }}
+        </label>
+        
+        <div style="margin-bottom: 1rem;">
+          <label for="id_image" style="cursor: pointer; display: inline-block;">
+            <div id="image-preview-container" style="position: relative; display: inline-block; border: 3px dashed var(--retro-border); border-radius: 8px; padding: 1rem; background: #f9f9f9; min-width: 200px; min-height: 200px; display: flex; align-items: center; justify-content: center;">
+              {% if form.instance.image %}
+                <img id="image-preview" src="{{ form.instance.image.url }}" alt="Preview" style="max-width: 300px; max-height: 300px; border-radius: 8px; object-fit: contain;">
+              {% else %}
+                <div id="image-placeholder" style="text-align: center; color: #999;">
+                  <div style="font-size: 3rem; margin-bottom: 0.5rem;">📷</div>
+                  <p style="margin: 0; font-size: 0.9rem;">Click para seleccionar imagen</p>
+                </div>
+                <img id="image-preview" src="" alt="Preview" style="display: none; max-width: 300px; max-height: 300px; border-radius: 8px; object-fit: contain;">
+              {% endif %}
+            </div>
+          </label>
+        </div>
+        
+        {{ form.image }}
+        
+        {% if form.image.help_text %}
+          <small style="color: #666; font-size: 0.85rem; display: block; margin-top: 0.5rem;">{{ form.image.help_text }}</small>
+        {% endif %}
+        {% for error in form.image.errors %}
+          <div style="color: #d9534f; font-size: 0.85rem; margin-top: 0.5rem;">{{ error }}</div>
+        {% endfor %}
+        
+        <p style="color: #666; font-size: 0.85rem; margin-top: 0.5rem;">
+          Esta imagen se mostrará en las vistas previas del producto. Máximo 5MB.
+        </p>
+      </div>
+
+      <!-- Título (solo en creación) -->
+      {% if not is_edit %}
+      <div style="margin-bottom: 1rem;">
+        {{ form.title.label_tag }}
+        {{ form.title }}
+        {% if form.title.help_text %}
+          <small style="color: #666; font-size: 0.85rem; display: block; margin-top: 0.25rem;">
+            {{ form.title.help_text }}
+          </small>
+        {% endif %}
+        {% for error in form.title.errors %}
+          <div style="color: #d9534f; font-size: 0.85rem; margin-top: 0.25rem;">{{ error }}</div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <!-- En modo edición, mostrar título solo como información -->
+      <div style="margin-bottom: 1rem; padding: 1rem; background: #f5f5f5; border-radius: 6px; border-left: 4px solid var(--retro-accent);">
+        <strong style="display: block; margin-bottom: 0.5rem; color: #555;">Título del producto:</strong>
+        <p style="margin: 0; font-size: 1.1rem; font-weight: 600; color: var(--retro-text);">{{ form.instance.title }}</p>
+        <small style="color: #666; font-size: 0.85rem; display: block; margin-top: 0.5rem;">⚠️ El título no puede ser modificado después de la creación</small>
+      </div>
+      {% endif %}
+
+      <!-- Descripción -->
+      <div style="margin-bottom: 1rem;">
+        {{ form.description.label_tag }}
+        {{ form.description }}
+        {% if form.description.help_text %}
+          <small style="color: #666; font-size: 0.85rem; display: block; margin-top: 0.25rem;">{{ form.description.help_text }}</small>
+        {% endif %}
+        {% for error in form.description.errors %}
+          <div style="color: #d9534f; font-size: 0.85rem; margin-top: 0.25rem;">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <!-- Categoría y Marca -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <div>
+          {{ form.category.label_tag }}
+          {{ form.category }}
+          {% if form.category.help_text %}
+            <small style="color: #666; font-size: 0.85rem; display: block; margin-top: 0.25rem;">{{ form.category.help_text }}</small>
+          {% endif %}
+          {% for error in form.category.errors %}
+            <div style="color: #d9534f; font-size: 0.85rem; margin-top: 0.25rem;">{{ error }}</div>
+          {% endfor %}
+        </div>
+        
+        <div>
+          {{ form.marca.label_tag }}
+          {{ form.marca }}
+          {% if form.marca.help_text %}
+            <small style="color: #666; font-size: 0.85rem; display: block; margin-top: 0.25rem;">{{ form.marca.help_text }}</small>
+          {% endif %}
+          {% for error in form.marca.errors %}
+            <div style="color: #d9534f; font-size: 0.85rem; margin-top: 0.25rem;">{{ error }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Precio y Stock -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <div>
+          {{ form.price.label_tag }}
+          {{ form.price }}
+          {% if form.price.help_text %}
+            <small style="color: #666; font-size: 0.85rem; display: block; margin-top: 0.25rem;">{{ form.price.help_text }}</small>
+          {% endif %}
+          {% for error in form.price.errors %}
+            <div style="color: #d9534f; font-size: 0.85rem; margin-top: 0.25rem;">{{ error }}</div>
+          {% endfor %}
+        </div>
+        
+        <div>
+          {{ form.stock.label_tag }}
+          {{ form.stock }}
+          {% if form.stock.help_text %}
+            <small style="color: #666; font-size: 0.85rem; display: block; margin-top: 0.25rem;">{{ form.stock.help_text }}</small>
+          {% endif %}
+          {% for error in form.stock.errors %}
+            <div style="color: #d9534f; font-size: 0.85rem; margin-top: 0.25rem;">{{ error }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Activo -->
+      <div style="margin-bottom: 1.5rem;">
+        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+          {{ form.active }}
+          <span>{{ form.active.label }}</span>
+        </label>
+        {% if form.active.help_text %}
+          <small style="color: #666; font-size: 0.85rem; display: block; margin-top: 0.25rem; margin-left: 1.75rem;">{{ form.active.help_text }}</small>
+        {% endif %}
+      </div>
+
+      <!-- Imágenes adicionales existentes (solo en edición) -->
+      {% if is_edit and existing_images %}
+        <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f9f9f9; border: 2px solid var(--retro-border); border-radius: 8px;">
+          <h4 style="margin: 0 0 1rem 0; color: var(--retro-accent);">📸 Imágenes adicionales actuales</h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 1rem;">
+            {% for img in existing_images %}
+              <div class="existing-image-item" data-image-id="{{ img.id }}" style="position: relative; border: 2px solid #ddd; border-radius: 8px; overflow: hidden; aspect-ratio: 1/1;">
+                <img src="{{ img.image.url }}" alt="Imagen adicional" style="width: 100%; height: 100%; object-fit: cover;">
+                <button type="button" class="delete-image-btn" data-image-id="{{ img.id }}" style="position: absolute; top: 4px; right: 4px; background: rgba(220, 53, 69, 0.9); color: white; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.3);" title="Eliminar imagen">×</button>
+              </div>
+            {% endfor %}
+          </div>
+          <p style="margin: 1rem 0 0 0; font-size: 0.85rem; color: #666;">Haz click en ✕ para eliminar una imagen.</p>
+        </div>
+      {% endif %}
+
+      <!-- Subir nuevas imágenes adicionales -->
+      <div style="margin-bottom: 1.5rem;">
+        <label style="display: block; font-weight: bold; margin-bottom: 0.5rem;">
+          {{ form.additional_images.label }}
+        </label>
+        {{ form.additional_images }}
+        {% if form.additional_images.help_text %}
+          <small style="color: #666; font-size: 0.85rem; display: block; margin-top: 0.5rem;">{{ form.additional_images.help_text }}</small>
+        {% endif %}
+        <p style="color: #666; font-size: 0.85rem; margin-top: 0.5rem;">
+          Puedes seleccionar múltiples archivos a la vez. Estas imágenes aparecerán en el carrusel del producto.
+        </p>
+      </div>
+
+      <div style="display: flex; gap: 0.75rem;">
+        <button type="submit" class="btn-retro" style="flex: 1;">
+          {% if form.instance.pk %}💾 Guardar cambios{% else %}🚀 Publicar producto{% endif %}
+        </button>
+        <a href="{% url 'mercado:productlist' %}" class="btn-retro-secondary" style="flex: 1; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center;">
+          Cancelar
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  #id_image {
+    display: none;
+  }
+  
+  /* Estilo para campo deshabilitado (título en edición) */
+  input[readonly],
+  input:disabled {
+    background-color: #f5f5f5 !important;
+    color: #666 !important;
+    cursor: not-allowed !important;
+    border-color: #ddd !important;
+  }
+</style>
+
+<script>
+  const imageInput = document.getElementById('id_image');
+  const imagePreview = document.getElementById('image-preview');
+  const imagePlaceholder = document.getElementById('image-placeholder');
+  const previewContainer = document.getElementById('image-preview-container');
+
+  imageInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        imagePreview.src = event.target.result;
+        imagePreview.style.display = 'block';
+        if (imagePlaceholder) {
+          imagePlaceholder.style.display = 'none';
+        }
+        previewContainer.style.border = '3px solid var(--retro-accent)';
+        previewContainer.style.background = '#fff';
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // Validación antes de enviar
+  document.getElementById('product-form').addEventListener('submit', function(e) {
+    const imageFile = imageInput.files[0];
+    const isEdit = {{ form.instance.pk|default:"false" }};
+    
+    if (!isEdit && !imageFile) {
+      e.preventDefault();
+      alert('Debes seleccionar una imagen para el producto.');
+      imageInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return false;
+    }
+  });
+
+  // Eliminar imágenes adicionales (solo en edición)
+  {% if is_edit %}
+  document.querySelectorAll('.delete-image-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      const imageId = this.getAttribute('data-image-id');
+      const imageItem = this.closest('.existing-image-item');
+      
+      if (!confirm('¿Estás seguro de que quieres eliminar esta imagen? Esta acción no se puede deshacer.')) {
+        return;
+      }
+      
+      // Obtener CSRF token
+      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+      
+      fetch(`/market/image/delete/${imageId}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrfToken,
+          'Content-Type': 'application/json',
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Eliminar visualmente el elemento
+          imageItem.style.transition = 'opacity 0.3s, transform 0.3s';
+          imageItem.style.opacity = '0';
+          imageItem.style.transform = 'scale(0.8)';
+          setTimeout(() => imageItem.remove(), 300);
+        } else {
+          alert('Error al eliminar la imagen: ' + (data.error || 'Desconocido'));
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Error al eliminar la imagen. Por favor, intenta de nuevo.');
+      });
+    });
+  });
+  {% endif %}
+</script>
+{% endblock %}

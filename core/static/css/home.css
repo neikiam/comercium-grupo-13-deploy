@@ -1,0 +1,193 @@
+/* ===== Reset general ===== */
+html, body {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #fafafa;
+}
+
+/* Evita que los contenedores padres limiten el ancho */
+main, .content {
+    padding: 0;
+    margin: 0;
+}
+
+/* ===== Sección HERO ===== */
+.hero-wrapper {
+    width: 100vw;
+    margin: 0;
+    padding: 0;
+}
+
+.hero {
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    width: 100vw;          /* ocupa todo el ancho de la ventana */
+    height: 100vh;         /* ocupa todo el alto de la ventana */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #ff7b00;
+    color: #fff;
+    text-align: center;
+    border-radius: 0;
+    box-shadow: none;
+    z-index: 0;
+}
+
+/* contenido dentro del hero */
+.hero-content {
+    max-width: 600px;
+    padding: 20px;
+}
+
+.hero h1 {
+    font-size: 2.8rem;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+
+.hero p {
+    font-size: 1.2rem;
+    margin-bottom: 25px;
+}
+
+.hero-btn {
+    background: #fff;
+    color: #ff7b00;
+    padding: 12px 25px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: background 0.3s, color 0.3s;
+}
+
+.hero-btn:hover {
+    background: #ff9f3c;
+    color: #fff;
+}
+
+/* ===== Sección PRINCIPAL ===== */
+.principal {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+/* Lista de productos o pasos */
+.product-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.product {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 15px;
+    gap: 20px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* invierte el orden (texto a la izquierda, imagen a la derecha) */
+.product.reverse {
+    flex-direction: row-reverse;
+}
+
+/* Imagenes */
+.product img {
+    width: 250px;
+    height: 250px;
+    object-fit: cover;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+
+/* Descripción */
+.description {
+    flex: 1;
+    color: #333;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+
+/* 🔹 Ajuste del hero en pantallas chicas */
+@media (max-width: 768px) {
+  .hero {
+    height: auto; /* deja que crezca según el contenido */
+    padding: 80px 20px;
+    text-align: center;
+  }
+
+  .hero-content {
+    max-width: 100%;
+    padding: 0 10px;
+  }
+
+  .hero-content h1 {
+    font-size: 2rem;
+  }
+
+  .hero-content p {
+    font-size: 1.1rem;
+  }
+
+  .hero-btn {
+    font-size: 1rem;
+    padding: 10px 20px;
+  }
+}
+
+@media (max-width: 900px) {
+    .product {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .product.reverse {
+        flex-direction: column;
+    }
+
+    .product img {
+        width: 100%;
+        height: auto;
+        max-width: 400px;
+    }
+
+    .description {
+        margin-top: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .principal {
+        padding: 10px;
+    }
+
+    .product {
+        padding: 10px;
+    }
+
+    .product img {
+        max-width: 100%;
+        border-radius: 8px;
+    }
+
+    .description {
+        font-size: 0.95rem;
+    }
+}
+

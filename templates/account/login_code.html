@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Código de verificación • Centro de Comercio Digital{% endblock %}
+
+{% block content %}
+<div class="retro-container" style="max-width: 500px; margin: 3rem auto;">
+  <div class="retro-panel">
+    <h1 style="margin-bottom: 1rem; text-align: center;">Código de Inicio de Sesión</h1>
+    
+    {% if form.non_field_errors %}
+    <div style="background: #f8d7da; border: 2px solid #c82333; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+      <strong style="color: #721c24;">{{ form.non_field_errors|first }}</strong>
+    </div>
+    {% endif %}
+
+    <p style="text-align: center; margin-bottom: 1.5rem; line-height: 1.6;">
+      Hemos enviado un código a <strong>{{ email }}</strong>.<br>
+      El código caduca en breve, así que introdzúcelo pronto.
+    </p>
+
+    <form method="post" action="" class="form-retro">
+      {% csrf_token %}
+      
+      <div style="margin-bottom: 1.5rem;">
+        <label for="id_code" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
+          Código:
+        </label>
+        <input type="text" 
+               name="code" 
+               id="id_code"
+               placeholder="Ingrese el código recibido" 
+               required 
+               value="{{ form.code.value|default:'' }}"
+               autocomplete="one-time-code"
+               style="width: 100%; font-size: 1.2rem; letter-spacing: 0.2em; text-align: center; font-family: 'Courier New', monospace;">
+        {% if form.code.errors %}
+        <div style="color: #c82333; font-size: 0.9rem; margin-top: 0.3rem;">
+          {{ form.code.errors|first }}
+        </div>
+        {% endif %}
+      </div>
+
+      <button type="submit" class="btn-retro" style="width: 100%; margin-bottom: 1rem;">
+        Confirmar
+      </button>
+      
+      <a href="{% url 'account_login' %}" class="btn-retro btn-secondary" style="display: block; text-align: center; text-decoration: none;">
+        Cancelar
+      </a>
+    </form>
+
+    <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--retro-border);">
+      <p style="text-align: center; color: #666; font-size: 0.9rem;">
+        💡 <strong>Tip:</strong> Si estás en modo desarrollo, busca el código en la consola del servidor.
+      </p>
+    </div>
+  </div>
+</div>
+
+<style>
+  #id_code {
+    background: #fff;
+    border: 3px solid var(--retro-border);
+    transition: all 0.2s ease;
+  }
+  
+  #id_code:focus {
+    border-color: var(--retro-primary);
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+    outline: none;
+  }
+  
+  .btn-secondary {
+    background: #6c757d;
+    color: white;
+  }
+  
+  .btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+  }
+</style>
+{% endblock %}

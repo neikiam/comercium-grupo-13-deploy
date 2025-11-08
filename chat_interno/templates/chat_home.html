@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Chat{% endblock %}
+{% block content %}
+<div class="container" style="max-width: 800px; margin: 2rem auto;">
+  <h2 style="margin-bottom: 1.5rem; text-align: center;">Centro de chats</h2>
+  <div class="retro-panel" style="padding: 1.5rem;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <a href="{% url 'chat_interno:chat' %}" class="btn-retro" style="font-size: 1.1rem; text-align: center; padding: 1.25rem;">💬 Chat general</a>
+      <a href="{% url 'chat_interno:private-list' %}" class="btn-retro" style="font-size: 1.1rem; text-align: center; padding: 1.25rem;">🔒 Chats privados</a>
+      <a href="{% url 'chat_interno:requests-list' %}" class="btn-retro" style="font-size: 1.1rem; text-align: center; padding: 1.25rem; position: relative;">📝 Solicitudes {% if pending_incoming or pending_outgoing %}<span style="background:#e53935;color:white;border-radius:999px;padding:0.15rem 0.5rem; font-size:0.8rem; position:absolute; top:8px; right:8px;">{{ pending_incoming|add:pending_outgoing }}</span>{% endif %}</a>
+      <a href="{% url 'chat_interno:blocked-list' %}" class="btn-retro" style="font-size: 1.1rem; text-align: center; padding: 1.25rem;">🚫 Usuarios bloqueados</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container" style="max-width: 600px; margin: 2rem auto;">
+  <div class="retro-panel">
+    <h2 style="margin-bottom: 1.5rem;">Usuarios conectados</h2>
+    <ul style="list-style: none; padding: 0;">
+      {% for ua in active %}
+        <li style="padding: 0.5rem 0; border-bottom: 1px solid var(--retro-border);">
+          <span class="badge-retro" style="margin-right: 0.5rem;">👤</span>
+          {{ ua.user.username }} — {{ ua.last_seen|timesince }} ago
+        </li>
+      {% empty %}
+        <li style="text-align: center; color: #666;">No hay usuarios conectados.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

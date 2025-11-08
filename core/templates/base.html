@@ -1,0 +1,119 @@
+{% load static %}
+
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}Centro de Comercio Digital{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
+  <link rel="stylesheet" href="{% static 'retro.css' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+  <!-- Navbar Retro -->
+  <nav class="navbar-retro">
+    <div class="container">
+      <a class="navbar-brand-retro" href="{% url 'home' %}" style="display: flex; align-items: center; text-decoration: none;">
+        <img src="{% static 'logo.png' %}" alt="Comercium Logo" style="height: 50px; width: auto; margin-right: 0.5rem;">
+      </a>
+
+      <ul class="navbar-nav-retro">
+        <li><a class="nav-link-retro" href="{% url 'mercado:productlist' %}">🏬 Tienda</a></li>
+        {% if user.is_authenticated %}
+        <li>
+          <a class="nav-link-retro" href="{% url 'mercado:view-cart' %}">🛒 Carrito{% if cart_count %} <span style="display:inline-block; min-width: 20px; padding: 0 6px; height: 20px; line-height: 20px; text-align:center; background: var(--retro-accent); color: #fff; border-radius: 10px; font-size: 0.8rem; margin-left: 6px;">{{ cart_count }}</span>{% endif %}</a>
+        </li>
+        {% endif %}
+        {% if user.is_authenticated %}
+          <li><a class="nav-link-retro" href="{% url 'chat_interno:chat' %}">💬 Chat</a></li>
+        {% endif %}
+
+        {% if user.is_authenticated %}
+          <li><a class="nav-link-retro" href="{% url 'chat_interno:private-list' %}">💬 Chats privados</a></li>
+          <li style="color: var(--retro-panel);">Hola, {{ user.first_name|default:user.username }}</li>
+          
+          <li>
+            <a href="{% url 'perfil:profile_view' %}" class="nav-link-retro">
+              {% if user.profile.avatar %}
+                <img src="{{ user.profile.avatar.url }}" alt="Avatar" style="width:32px; height:32px; border-radius:50%; border:2px solid var(--retro-border); vertical-align:middle;">
+              {% else %}
+                <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=random" alt="Avatar" style="width:32px; height:32px; border-radius:50%; border:2px solid var(--retro-border); vertical-align:middle;">
+              {% endif %}
+            </a>
+          </li>
+
+          <li>
+            <form method="post" action="{% url 'account_logout' %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn-retro btn-retro-small">Salir</button>
+            </form>
+          </li>
+        {% else %}
+          <li><a href="{% url 'core:login' %}" class="btn-retro btn-retro-small">Ingresar</a></li>
+          <li><a href="{% url 'account_signup' %}" class="btn-retro btn-retro-small" style="background: var(--retro-success); border-color: var(--retro-success);">Registrarse</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Contenido principal -->
+  <main>
+    {% if messages %}
+      <div class="container" style="margin-top: 1rem;">
+        {% for message in messages %}
+          {% if message.tags == 'success' %}
+            <div class="retro-panel" style="margin-bottom: 0.75rem; border-left: 4px solid #4caf50;">
+          {% elif message.tags == 'warning' %}
+            <div class="retro-panel" style="margin-bottom: 0.75rem; border-left: 4px solid #ff9800;">
+          {% elif message.tags == 'error' %}
+            <div class="retro-panel" style="margin-bottom: 0.75rem; border-left: 4px solid #f44336;">
+          {% else %}
+            <div class="retro-panel" style="margin-bottom: 0.75rem; border-left: 4px solid var(--retro-accent);">
+          {% endif %}
+              <p style="margin: 0;">{{ message }}</p>
+            </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer Retro -->
+  <footer class="footer-retro">
+    <div class="container">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; margin-bottom: 2rem;">
+        <div>
+          <h5 style="font-size: 1.2rem; margin-bottom: 1rem;">Enlaces</h5>
+          <ul style="list-style: none; padding: 0;">
+            <li style="margin-bottom: 0.5rem;"><a href="{% url 'mercado:productlist' %}" style="font-size: 1rem;">Tienda</a></li>
+            <li style="margin-bottom: 0.5rem;"><a href="{% url 'home' %}" style="font-size: 1rem;">Inicio</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h5 style="font-size: 1.2rem; margin-bottom: 1rem;">Contáctanos</h5>
+          <ul style="list-style: none; padding: 0;">
+            <li style="margin-bottom: 0.5rem; font-size: 1rem;"><i class="fas fa-phone-alt"></i> +54 9 11 3909-7838</li>
+            <li style="margin-bottom: 0.5rem; font-size: 1rem;"><i class="fas fa-envelope"></i> neikiam500@gmail.com</li>
+            <li style="margin-bottom: 0.5rem; font-size: 1rem;"><i class="fas fa-map-marker-alt"></i> González Catán, La Matanza, Buenos Aires, Argentina</li>
+          </ul>
+        </div>
+
+        <div>
+          <h5 style="font-size: 1.2rem; margin-bottom: 1rem;">Centro de Comercio Digital</h5>
+          <p style="font-size: 1rem; line-height: 1.6;">Marketplace fácil de usar para</p>
+        </div>
+      </div>
+
+      <div class="footer-bottom-retro">
+        &copy; {% now "Y" %} Centro de Comercio Digital. Todos los derechos reservados.
+      </div>
+    </div>
+  </footer>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}Chats privados{% endblock %}
+{% block content %}
+<div class="container" style="max-width: 800px; margin: 2rem auto;">
+  <h2 style="margin-bottom: 1rem; text-align:center;">Chats privados</h2>
+  <p style="text-align:center; margin-bottom: 1rem; display:flex; gap:0.5rem; justify-content:center; flex-wrap:wrap;">
+    <a class="btn-retro btn-small" href="{% url 'chat_interno:home' %}">⬅ Centro</a>
+    <a class="btn-retro btn-small" href="{% url 'chat_interno:requests-list' %}">📝 Solicitudes</a>
+    <a class="btn-retro btn-small" href="{% url 'chat_interno:blocked-list' %}">🚫 Bloqueados</a>
+  </p>
+
+  <div class="retro-panel" style="margin-bottom: 1rem;">
+    <form method="post" action="{% url 'chat_interno:private-start-by-username' %}" class="form-retro" id="search-form">
+      {% csrf_token %}
+      <div style="display:flex; gap:0.75rem; align-items:end; position: relative;">
+        <div style="flex:1; position: relative;">
+          <label for="username">Iniciar chat con usuario:</label>
+          <input 
+            type="text" 
+            id="username" 
+            name="username" 
+            placeholder="Buscar por nombre de usuario..." 
+            autocomplete="off"
+            value="{{ search_query|default:'' }}"
+          />
+          <div id="suggestions" style="
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid var(--retro-border);
+            border-top: none;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+          "></div>
+        </div>
+        <button type="submit" class="btn-retro btn-small">Iniciar</button>
+      </div>
+    </form>
+
+    {% if error_message %}
+      <div style="margin-top: 1rem; padding: 0.75rem; background: #ffebee; border: 1px solid #ef5350; border-radius: 6px; color: #c62828;">
+        {{ error_message }}
+      </div>
+    {% endif %}
+
+    {% if user_suggestions %}
+      <div style="margin-top: 1rem;">
+        <p style="margin-bottom: 0.5rem; font-weight: bold;">¿Te refieres a alguno de estos usuarios?</p>
+        <ul style="list-style: none; padding: 0; margin: 0;">
+          {% for suggested_user in user_suggestions %}
+            <li style="padding: 0.5rem; border-bottom: 1px solid var(--retro-border); display:flex; align-items:center; gap:0.75rem;">
+                {% if suggested_user.profile.avatar %}
+                  <img src="{{ suggested_user.profile.avatar.url }}" alt="{{ suggested_user.username }}" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--retro-border);">
+                {% else %}
+                  <img src="https://ui-avatars.com/api/?name={{ suggested_user.username }}&background=random&size=40" alt="{{ suggested_user.username }}" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--retro-border);">
+                {% endif %}
+                <div style="flex: 1;">
+                  <strong>{{ suggested_user.username }}</strong>
+                  {% if suggested_user.get_full_name %}
+                    <span style="color: #666;"> - {{ suggested_user.get_full_name }}</span>
+                  {% endif %}
+                </div>
+                <a href="{% url 'perfil:user_profile_view' suggested_user.id %}" class="btn-retro btn-small">👤 Perfil</a>
+                <form method="post" action="{% url 'chat_interno:request-send' suggested_user.id %}" style="margin:0;">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-retro btn-small">� Solicitar</button>
+                </form>
+                <form method="post" action="{% url 'chat_interno:block-user' suggested_user.id %}" style="margin:0;">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-retro btn-small">🚫 Bloquear</button>
+                </form>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="retro-panel">
+    <h3 style="margin-bottom: 0.75rem;">Tus conversaciones</h3>
+    {% if threads %}
+      <ul style="list-style:none; padding:0; margin:0;">
+        {% for t in threads %}
+          {% if user == t.user1 %}
+            {% with other=t.user2 %}
+              <li style="padding:0.75rem 0; border-bottom:1px solid var(--retro-border); display: flex; align-items: center; gap: 0.75rem;">
+                {% if other.profile.avatar %}
+                  <img src="{{ other.profile.avatar.url }}" alt="{{ other.username }}" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--retro-border);">
+                {% else %}
+                  <img src="https://ui-avatars.com/api/?name={{ other.username }}&background=random&size=40" alt="{{ other.username }}" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--retro-border);">
+                {% endif %}
+                <a href="{% url 'chat_interno:private-chat' t.id %}" class="nav-link-retro" style="flex: 1;">💬 {{ other.username }}</a>
+                <a href="{% url 'perfil:user_profile_view' other.id %}" class="btn-retro btn-small">👤</a>
+                <form method="post" action="{% url 'chat_interno:block-user' other.id %}">
+                  {% csrf_token %}
+                  <button class="btn-retro btn-small" type="submit">🚫</button>
+                </form>
+              </li>
+            {% endwith %}
+          {% else %}
+            {% with other=t.user1 %}
+              <li style="padding:0.75rem 0; border-bottom:1px solid var(--retro-border); display: flex; align-items: center; gap: 0.75rem;">
+                {% if other.profile.avatar %}
+                  <img src="{{ other.profile.avatar.url }}" alt="{{ other.username }}" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--retro-border);">
+                {% else %}
+                  <img src="https://ui-avatars.com/api/?name={{ other.username }}&background=random&size=40" alt="{{ other.username }}" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--retro-border);">
+                {% endif %}
+                <a href="{% url 'chat_interno:private-chat' t.id %}" class="nav-link-retro" style="flex: 1;">💬 {{ other.username }}</a>
+                <a href="{% url 'perfil:user_profile_view' other.id %}" class="btn-retro btn-small">👤</a>
+                <form method="post" action="{% url 'chat_interno:block-user' other.id %}">
+                  {% csrf_token %}
+                  <button class="btn-retro btn-small" type="submit">🚫</button>
+                </form>
+              </li>
+            {% endwith %}
+          {% endif %}
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p style="margin:0; color: #666;">Aún no tienes chats privados.</p>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  const usernameInput = document.getElementById('username');
+  const suggestionsBox = document.getElementById('suggestions');
+  let debounceTimer;
+
+  usernameInput.addEventListener('input', function() {
+    clearTimeout(debounceTimer);
+    const query = this.value.trim();
+    
+    if (query.length < 2) {
+      suggestionsBox.style.display = 'none';
+      return;
+    }
+
+    debounceTimer = setTimeout(() => {
+      fetch(`/chat/api/search-users/?q=${encodeURIComponent(query)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.users.length === 0) {
+            suggestionsBox.style.display = 'none';
+            return;
+          }
+
+          suggestionsBox.innerHTML = '';
+          data.users.forEach(user => {
+            const div = document.createElement('div');
+            div.style.cssText = 'padding: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 0.75rem; border-bottom: 1px solid #eee;';
+            div.innerHTML = `
+              <img src="${user.avatar}" alt="${user.username}" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--retro-border);">
+              <div style="flex: 1;">
+                <strong>${user.username}</strong>
+                ${user.display_name !== user.username ? `<br><span style="color: #666; font-size: 0.9rem;">${user.display_name}</span>` : ''}
+              </div>
+            `;
+            div.addEventListener('mouseenter', () => {
+              div.style.background = '#f0f0f0';
+            });
+            div.addEventListener('mouseleave', () => {
+              div.style.background = 'white';
+            });
+            div.addEventListener('click', () => {
+              usernameInput.value = user.username;
+              suggestionsBox.style.display = 'none';
+              document.getElementById('search-form').submit();
+            });
+            suggestionsBox.appendChild(div);
+          });
+          
+          suggestionsBox.style.display = 'block';
+        })
+        .catch(err => console.error('Error fetching suggestions:', err));
+    }, 300);
+  });
+
+  // Cerrar sugerencias al hacer clic fuera
+  document.addEventListener('click', function(e) {
+    if (!usernameInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
+      suggestionsBox.style.display = 'none';
+    }
+  });
+
+  // Cerrar sugerencias al presionar Escape
+  usernameInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      suggestionsBox.style.display = 'none';
+    }
+  });
+</script>
+{% endblock %}

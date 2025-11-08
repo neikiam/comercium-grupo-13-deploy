@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container" style="max-width: 800px; margin: 2rem auto;">
+  <h2 style="margin-bottom: 1.5rem; text-align: center;">Chat del mercado local</h2>
+  <p style="text-align:center; margin-bottom: 1rem; display:flex; gap:0.5rem; justify-content:center; flex-wrap:wrap;">
+    <a class="btn-retro btn-small" href="{% url 'chat_interno:home' %}">⬅ Centro</a>
+    <a class="btn-retro btn-small" href="{% url 'chat_interno:private-list' %}">🔒 Privados</a>
+    <a class="btn-retro btn-small" href="{% url 'chat_interno:requests-list' %}">📝 Solicitudes</a>
+    <a class="btn-retro btn-small" href="{% url 'chat_interno:blocked-list' %}">🚫 Bloqueados</a>
+  </p>
+
+  <div class="retro-panel" style="margin-bottom: 1rem;">
+    <div id="chat-box" class="chat-retro"></div>
+  </div>
+
+  <form id="chat-form" class="form-retro">
+    {% csrf_token %}
+    <div style="display: flex; gap: 0.75rem;">
+      <textarea id="chat-text" rows="2" style="flex: 1; resize: vertical;" placeholder="Escribe un mensaje..."></textarea>
+      <button type="submit" class="btn-retro btn-small" style="align-self: flex-end;">Enviar</button>
+    </div>
+  </form>
+</div>
+
+<script>
+let lastId = 0;
+const box = document.getElementById("chat-box");
+const currentUserId = parseInt('{{ request.user.id }}');
+const privateStartUrlTpl = "{% url 'chat_interno:private-start' 0 %}";
+
+function messageRow(m){
+  const row = document.createElement('div');
+  row.style.display = 'flex';
+  row.style.gap = '0.5rem';
+  row.style.alignItems = 'flex-start';
+
+  const left = document.createElement('div');
+  left.style.display = 'flex';
+  left.style.gap = '0.4rem';
+  left.style.alignItems = 'center';
+
+  if (m.user_id && m.user_id !== currentUserId){
+    const menu = document.createElement('a');
+    menu.textContent = '⋮';
+    menu.title = 'Iniciar chat privado';
+    menu.href = privateStartUrlTpl.replace('0', m.user_id);
+    menu.style.textDecoration = 'none';
+    menu.style.fontSize = '1.1rem';
+    left.appendChild(menu);
+  } else {
+    const spacer = document.createElement('span');
+    spacer.style.width = '1rem';
+    left.appendChild(spacer);
+  }
+
+  const avatar = document.createElement('img');
+  avatar.src = m.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m.user) + '&background=random';
+  avatar.alt = m.user;
+  avatar.className = 'avatar-24';
+  avatar.style.width = '24px';
+  avatar.style.height = '24px';
+  avatar.style.borderRadius = '50%';
+  avatar.style.border = '1px solid var(--retro-border)';
+  avatar.style.objectFit = 'cover';
+  left.appendChild(avatar);
+
+  const msg = document.createElement('div');
+  msg.className = 'chat-message-retro';
+
+  const strongEl = document.createElement('strong');
+  strongEl.textContent = m.user || 'Anon';
+  const textNode = document.createTextNode(`: ${m.text || ''} `);
+  const smallEl = document.createElement('small');
+  smallEl.style.color = '#999';
+  smallEl.style.fontSize = '0.85rem';
+  smallEl.textContent = new Date(m.created_at).toLocaleTimeString();
+
+  msg.appendChild(strongEl);
+  msg.appendChild(textNode);
+  msg.appendChild(smallEl);
+
+  row.appendChild(left);
+  row.appendChild(msg);
+  return row;
+}
+
+function renderMessage(m){
+  const el = messageRow(m);
+  box.appendChild(el);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function poll(){
+  const res = await fetch("{% url 'chat_interno:messages-api' %}?after_id=" + lastId);
+  if (!res.ok) return;
+  const data = await res.json();
+  data.messages.forEach(m => {
+    renderMessage(m);
+    lastId = Math.max(lastId, m.id);
+  });
+}
+setInterval(poll, 3000); // cada 3s
+poll();
+
+document.getElementById("chat-form").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const text = document.getElementById("chat-text").value;
+  if (!text.trim()) return;
+  const form = new FormData();
+  form.append("text", text);
+  form.append("csrfmiddlewaretoken", document.querySelector('[name=csrfmiddlewaretoken]').value);
+  const resp = await fetch("{% url 'chat_interno:post-api' %}", {
+    method: "POST",
+    body: form
+  });
+  if (resp.ok){
+    document.getElementById("chat-text").value = "";
+    poll(); // traer los nuevos
+  }
+});
+</script>
+{% endblock %}

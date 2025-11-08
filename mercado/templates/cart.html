@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Tu carrito{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px; margin: 2rem auto;">
+  <h2 style="margin-bottom: 1.5rem; text-align: center;">🛒 Tu carrito de compras</h2>
+
+  {% if cart.items.all %}
+    <div class="retro-panel" style="margin-bottom: 1.5rem;">
+      {% for item in cart.items.all %}
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid var(--retro-border);">
+          <div>
+            <h6 style="margin: 0 0 0.5rem 0; font-weight: 600;">{{ item.product.title }}</h6>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <form method="post" action="{% url 'mercado:cart-decrease' item.product.id %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn-retro btn-small">➖</button>
+              </form>
+              <span style="font-weight: 600; min-width: 30px; text-align: center;">{{ item.quantity }}</span>
+              <form method="post" action="{% url 'mercado:cart-increase' item.product.id %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn-retro btn-small">➕</button>
+              </form>
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <span style="font-weight: 600; display: block; margin-bottom: 0.5rem; font-size: 1.1rem;">${{ item.subtotal }}</span>
+            <form method="post" action="{% url 'mercado:cart-remove' item.product.id %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn-retro-danger btn-small">🗑️ Quitar</button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding: 1rem; background: var(--retro-panel); border-radius: 8px;">
+      <h5 style="margin: 0;">Total:</h5>
+      <h4 style="margin: 0; color: var(--retro-accent); font-weight: bold;">${{ cart.total }}</h4>
+    </div>
+
+    <!-- Botón de pago -->
+    <div style="text-align: center;">
+      <button id="checkout-btn" class="btn-retro" style="padding: 0.75rem 2rem; font-size: 1.1rem;">
+        💳 Pagar carrito completo
+      </button>
+    </div>
+
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
+    <script>
+      const mp = new MercadoPago("{{ PUBLIC_KEY }}", { locale: 'es-AR' });
+
+      document.getElementById("checkout-btn").addEventListener("click", (e) => {
+        const btn = e.target;
+        btn.disabled = true;
+        btn.textContent = "⏳ Procesando...";
+        
+        fetch("{% url 'mercado:crear-preferencia-carrito' %}")
+          .then(response => response.json())
+          .then(data => {
+            window.location.href = data.init_point;
+          })
+          .catch(() => {
+            btn.disabled = false;
+            btn.textContent = "💳 Pagar carrito completo";
+            alert("Hubo un problema al generar el pago. Intenta nuevamente.");
+          });
+      });
+    </script>
+  {% else %}
+    <div class="retro-panel" style="text-align: center; padding: 3rem;">
+      <h5 style="color: #666; margin-bottom: 1rem;">Tu carrito está vacío 🥀</h5>
+      <a href="{% url 'mercado:productlist' %}" class="btn-retro">
+        Ver productos
+      </a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
