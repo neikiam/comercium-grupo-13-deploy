@@ -90,7 +90,7 @@ def product_list(request):
     get_params.pop('page', None)
     base_qs = get_params.urlencode()
 
-                pass
+    pass
     
     paginator = Paginator(queryset, PRODUCTS_PER_PAGE)
     page_number = request.GET.get('page')
