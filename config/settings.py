@@ -81,6 +81,14 @@ ACCOUNT_EMAIL_VERIFICATION = os.getenv("ACCOUNT_EMAIL_VERIFICATION", "none")
 ACCOUNT_PASSWORD_INPUT_RENDER_VALUE = False
 ACCOUNT_SESSION_REMEMBER = True
 
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = True
+ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = True
+ACCOUNT_USERNAME_MIN_LENGTH = 3
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_EMAIL_VERIFICATION = os.getenv("ACCOUNT_EMAIL_VERIFICATION", "none")
+SOCIALACCOUNT_QUERY_EMAIL = True
+
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@comercium.local")
 EMAIL_HOST = os.getenv("EMAIL_HOST", "localhost")
@@ -124,6 +132,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "mercado.context_processors.cart",
+                "core.context_processors.socialaccount_settings",
             ],
         },
     },

@@ -12,6 +12,9 @@ pip install -r requirements.txt
 # migraciones
 python manage.py migrate --noinput
 
+# configurar sitio para allauth/OAuth
+python manage.py setup_site
+
 # collectstatic
 python manage.py collectstatic --no-input
 

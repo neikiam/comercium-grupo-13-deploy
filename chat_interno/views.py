@@ -157,7 +157,6 @@ def private_start(request, user_id: int):
         try:
             thread = DirectMessageThread.objects.create(user1=a, user2=b)
         except IntegrityError:
-            # Otro proceso ya creó el hilo, obtenerlo
             thread = DirectMessageThread.objects.get(user1=a, user2=b)
         return redirect("chat_interno:private-chat", thread_id=thread.id)
     # Enviar o reiterar solicitud
@@ -240,7 +239,6 @@ def private_start_by_username(request):
         try:
             thread = DirectMessageThread.objects.create(user1=a, user2=b)
         except IntegrityError:
-            # Otro proceso ya creó el hilo, obtenerlo
             thread = DirectMessageThread.objects.get(user1=a, user2=b)
         return redirect("chat_interno:private-chat", thread_id=thread.id)
     # Enviar solicitud si no existe
