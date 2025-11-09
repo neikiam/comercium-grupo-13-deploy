@@ -6,26 +6,76 @@
   <div class="retro-panel">
     <h2 style="text-align: center; margin-bottom: 1.5rem;">Crear cuenta</h2>
 
-    <form method="post" class="form-retro">
+    {% if form.errors %}
+      <div class="retro-panel" style="margin-bottom: 1rem; border-left: 4px solid #f44336; background: #ffebee;">
+        <p style="margin: 0; color: #c62828; font-weight: 600;">Por favor corrige los siguientes errores:</p>
+        <ul style="margin: 0.5rem 0 0 1.5rem; color: #c62828;">
+          {% for field in form %}
+            {% for error in field.errors %}
+              <li>{{ field.label }}: {{ error }}</li>
+            {% endfor %}
+          {% endfor %}
+          {% for error in form.non_field_errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <form method="post" class="form-retro" id="signup-form">
       {% csrf_token %}
+      
       <div style="margin-bottom: 1rem;">
-        {{ form.username.label_tag }}
+        <label for="id_username" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+          Nombre de usuario <span style="color: #f44336;">*</span>
+        </label>
         {{ form.username }}
-      </div>
-      <div style="margin-bottom: 1rem;">
-        {{ form.email.label_tag }}
-        {{ form.email }}
-      </div>
-      <div style="margin-bottom: 1rem;">
-        {{ form.password1.label_tag }}
-        {{ form.password1 }}
-      </div>
-      <div style="margin-bottom: 1rem;">
-        {{ form.password2.label_tag }}
-        {{ form.password2 }}
+        {% if form.username.help_text %}
+          <small style="display: block; margin-top: 0.25rem; color: #666;">{{ form.username.help_text }}</small>
+        {% endif %}
       </div>
 
-      <button type="submit" class="btn-retro" style="width: 100%;">Registrarse</button>
+      <div style="margin-bottom: 1rem;">
+        <label for="id_email" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+          Correo electrónico <span style="color: #f44336;">*</span>
+        </label>
+        {{ form.email }}
+        {% if form.email.help_text %}
+          <small style="display: block; margin-top: 0.25rem; color: #666;">{{ form.email.help_text }}</small>
+        {% endif %}
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <label for="id_password1" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+          Contraseña <span style="color: #f44336;">*</span>
+        </label>
+        <input type="password" name="password1" id="id_password1" required 
+               class="input-retro" 
+               placeholder="Ingresa tu contraseña"
+               minlength="8"
+               style="width: 100%;">
+        <small style="display: block; margin-top: 0.25rem; color: #666;">
+          Mínimo 8 caracteres. No puede ser completamente numérica.
+        </small>
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <label for="id_password2" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+          Confirmar contraseña <span style="color: #f44336;">*</span>
+        </label>
+        <input type="password" name="password2" id="id_password2" required 
+               class="input-retro" 
+               placeholder="Repite tu contraseña"
+               minlength="8"
+               style="width: 100%;">
+        <small style="display: block; margin-top: 0.25rem; color: #666;">
+          Ingresa la misma contraseña para verificación.
+        </small>
+      </div>
+
+      <button type="submit" class="btn-retro" style="width: 100%; margin-top: 1rem;">
+        Registrarse
+      </button>
     </form>
 
     <p style="text-align: center; margin-top: 1.5rem;">
@@ -33,11 +83,59 @@
       <a href="{% url 'account_login' %}">Iniciá sesión</a>
     </p>
 
-    <div style="display: flex; justify-content: center; gap: 1rem; margin-top: 1rem;">
-      <a href="{% provider_login_url 'google' %}" role="button" class="btn-retro btn-small" style="display: flex; align-items: center; gap: 0.5rem;">
-        <i class="fab fa-google"></i> Google
-      </a>
+    <hr style="margin: 1.5rem 0; border: none; border-top: 2px solid var(--retro-border);">
+    
+    <p style="text-align: center; margin-bottom: 1rem; color: #666;">O registrate con:</p>
+    
+    <div style="display: flex; justify-content: center; gap: 1rem;">
+      {% if GOOGLE_CLIENT_ID %}
+        <a href="{% provider_login_url 'google' %}" role="button" class="btn-retro btn-small" style="display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fab fa-google"></i> Google
+        </a>
+      {% else %}
+        <p style="color: #f44336; font-size: 0.9rem; text-align: center;">
+          El registro con Google no está disponible temporalmente.
+        </p>
+      {% endif %}
     </div>    
   </div>
 </div>
+
+<script>
+// Validación del lado del cliente
+document.getElementById('signup-form').addEventListener('submit', function(e) {
+  const password1 = document.getElementById('id_password1').value;
+  const password2 = document.getElementById('id_password2').value;
+  const username = document.getElementById('id_username').value;
+  const email = document.getElementById('id_email').value;
+
+  // Validar que todos los campos estén completos
+  if (!username || !email || !password1 || !password2) {
+    e.preventDefault();
+    alert('Por favor completa todos los campos obligatorios.');
+    return false;
+  }
+
+  // Validar que las contraseñas coincidan
+  if (password1 !== password2) {
+    e.preventDefault();
+    alert('Las contraseñas no coinciden. Por favor verifica.');
+    return false;
+  }
+
+  // Validar longitud mínima
+  if (password1.length < 8) {
+    e.preventDefault();
+    alert('La contraseña debe tener al menos 8 caracteres.');
+    return false;
+  }
+
+  // Validar que no sea completamente numérica
+  if (/^\d+$/.test(password1)) {
+    e.preventDefault();
+    alert('La contraseña no puede ser completamente numérica.');
+    return false;
+  }
+});
+</script>
 {% endblock %}
