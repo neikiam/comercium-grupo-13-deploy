@@ -41,11 +41,18 @@
 
     <!-- Botón de pago -->
     <div style="text-align: center;">
-      <button id="checkout-btn" class="btn-retro" style="padding: 0.75rem 2rem; font-size: 1.1rem;">
-        💳 Pagar carrito completo
-      </button>
+      {% if PUBLIC_KEY %}
+        <button id="checkout-btn" class="btn-retro" style="padding: 0.75rem 2rem; font-size: 1.1rem;">
+          💳 Pagar carrito completo
+        </button>
+      {% else %}
+        <p style="color: #f44336; font-weight: 600; margin: 1rem 0;">
+          El servicio de pagos no está disponible temporalmente. Contacta al administrador.
+        </p>
+      {% endif %}
     </div>
 
+    {% if PUBLIC_KEY %}
     <script src="https://sdk.mercadopago.com/js/v2"></script>
     <script>
       const mp = new MercadoPago("{{ PUBLIC_KEY }}", { locale: 'es-AR' });
@@ -58,15 +65,19 @@
         fetch("{% url 'mercado:crear-preferencia-carrito' %}")
           .then(response => response.json())
           .then(data => {
+            if (data.error) {
+              throw new Error(data.message || 'Error desconocido');
+            }
             window.location.href = data.init_point;
           })
-          .catch(() => {
+          .catch((err) => {
             btn.disabled = false;
             btn.textContent = "💳 Pagar carrito completo";
-            alert("Hubo un problema al generar el pago. Intenta nuevamente.");
+            alert(err.message || "Hubo un problema al generar el pago. Intenta nuevamente.");
           });
       });
     </script>
+    {% endif %}
   {% else %}
     <div class="retro-panel" style="text-align: center; padding: 3rem;">
       <h5 style="color: #666; margin-bottom: 1rem;">Tu carrito está vacío 🥀</h5>

@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.db import IntegrityError
 from django.db.models import Q
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -153,7 +154,11 @@ def private_start(request, user_id: int):
         status=ChatRequest.STATUS_ACCEPTED,
     ).exists()
     if has_accepted:
-        thread = DirectMessageThread.objects.create(user1=a, user2=b)
+        try:
+            thread = DirectMessageThread.objects.create(user1=a, user2=b)
+        except IntegrityError:
+            # Otro proceso ya creó el hilo, obtenerlo
+            thread = DirectMessageThread.objects.get(user1=a, user2=b)
         return redirect("chat_interno:private-chat", thread_id=thread.id)
     # Enviar o reiterar solicitud
     ChatRequest.objects.get_or_create(requester=request.user, target=other, status=ChatRequest.STATUS_REQUESTED)
@@ -232,7 +237,11 @@ def private_start_by_username(request):
         status=ChatRequest.STATUS_ACCEPTED,
     ).exists()
     if has_accepted:
-        thread = DirectMessageThread.objects.create(user1=a, user2=b)
+        try:
+            thread = DirectMessageThread.objects.create(user1=a, user2=b)
+        except IntegrityError:
+            # Otro proceso ya creó el hilo, obtenerlo
+            thread = DirectMessageThread.objects.get(user1=a, user2=b)
         return redirect("chat_interno:private-chat", thread_id=thread.id)
     # Enviar solicitud si no existe
     ChatRequest.objects.get_or_create(requester=request.user, target=other, status=ChatRequest.STATUS_REQUESTED)

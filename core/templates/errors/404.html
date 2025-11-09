@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Página no encontrada - 404{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 700px; margin: 4rem auto; text-align: center;">
+  <div class="retro-panel" style="padding: 3rem;">
+    <h1 style="font-size: 5rem; margin: 0 0 1rem 0; color: var(--retro-accent);">404</h1>
+    <h2 style="margin-bottom: 1rem;">Página no encontrada</h2>
+    <p style="margin-bottom: 2rem; color: #666; font-size: 1.1rem;">
+      Lo sentimos, la página que buscas no existe o fue movida.
+    </p>
+    <a href="{% url 'home' %}" class="btn-retro" style="font-size: 1.1rem;">
+      🏠 Volver al inicio
+    </a>
+  </div>
+</div>
+{% endblock %}
