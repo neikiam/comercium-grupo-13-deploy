@@ -9,7 +9,7 @@
   --admin-panel: #b8c5c4;
   --admin-panel-light: #c8d5d4;
   --admin-text: #2d3332;
-  --admin-text-light: #5a6968;
+  --admin-text-light: #181818;
   --admin-primary: #3e7d7d;
   --admin-primary-dark: #2e5d5d;
   --admin-accent: #e09b5d;
@@ -434,7 +434,7 @@ body.login {
 }
 
 #login .helptext {
-  color: #5a6968 !important;
+  color: #222222 !important;
   font-size: 0.9rem !important;
 }
 
