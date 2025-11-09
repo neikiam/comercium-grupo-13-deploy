@@ -11,7 +11,6 @@ class Command(BaseCommand):
     help = 'Configura el sitio de Django para allauth/OAuth basado en el hostname de Render'
 
     def handle(self, *args, **options):
-        # Obtener el hostname desde variables de entorno
         render_hostname = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
         
         if not render_hostname:
@@ -28,7 +27,6 @@ class Command(BaseCommand):
             name = 'Comercium'
         
         try:
-            # Obtener o crear el sitio con SITE_ID=1
             site = Site.objects.get(pk=1)
             site.domain = domain
             site.name = name
