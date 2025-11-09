@@ -52,7 +52,7 @@
             </form>
           </li>
         {% else %}
-          <li><a href="{% url 'core:login' %}" class="btn-retro btn-retro-small">Ingresar</a></li>
+          <li><a href="{% url 'login' %}" class="btn-retro btn-retro-small">Ingresar</a></li>
           <li><a href="{% url 'account_signup' %}" class="btn-retro btn-retro-small" style="background: var(--retro-success); border-color: var(--retro-success);">Registrarse</a></li>
         {% endif %}
       </ul>
