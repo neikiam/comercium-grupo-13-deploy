@@ -103,19 +103,20 @@ div, section, article, aside,
 .module caption,
 th {
   background: linear-gradient(135deg, var(--admin-accent) 0%, var(--admin-accent-hover) 100%) !important;
-  color: #2d3332 !important;
+  color: #ffffff !important;
   border-radius: 8px 8px 0 0 !important;
   padding: 10px 15px !important;
   font-family: 'Georgia', serif !important;
-  text-shadow: 1px 1px 1px rgba(255,255,255,0.4) !important;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5) !important;
   border-bottom: 2px solid var(--admin-border) !important;
   font-weight: bold !important;
 }
 
 .module tr th a,
 .module caption a {
-  color: #1a2524 !important;
+  color: #ffffff !important;
   font-weight: bold !important;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5) !important;
 }
 
 .module tbody tr td a {
@@ -416,7 +417,25 @@ body.login {
 }
 
 #login .form-row label {
-  color: var(--admin-text) !important;
+  color: #2d3332 !important;
+  font-weight: bold !important;
+  display: block !important;
+  margin-bottom: 5px !important;
+}
+
+#login input[type="text"],
+#login input[type="password"] {
+  background: white !important;
+  color: #2d3332 !important;
+  border: 2px solid var(--admin-border) !important;
+  width: 100% !important;
+  padding: 10px !important;
+  font-size: 1rem !important;
+}
+
+#login .helptext {
+  color: #5a6968 !important;
+  font-size: 0.9rem !important;
 }
 
 #login .submit-row {
@@ -480,11 +499,11 @@ body.login #container {
 
 #changelist-filter li.selected a {
   background: var(--admin-accent) !important;
-  color: #2d3332 !important;
+  color: #ffffff !important;
   border-radius: 6px !important;
   padding: 5px 10px !important;
   font-weight: bold !important;
-  text-shadow: 1px 1px 1px rgba(255,255,255,0.3) !important;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5) !important;
 }
 
 /* ========== RESPONSIVE ========== */
