@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Mis Compras{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1000px; margin: 2rem auto;">
+  <h2 style="margin-bottom: 1.5rem;">🛍️ Mis Compras</h2>
+
+  {% if orders %}
+    {% for order in orders %}
+    <div class="retro-panel" style="margin-bottom: 1.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 2px solid var(--retro-border); padding-bottom: 1rem;">
+        <div>
+          <h5 style="margin: 0;">Orden #{{ order.id }}</h5>
+          <small style="color: #666;">{{ order.created_at|date:"d/m/Y H:i" }}</small>
+        </div>
+        <div style="text-align: right;">
+          <span class="badge" style="background: {% if order.status == 'paid' %}#4caf50{% elif order.status == 'pending' %}#ff9800{% else %}#f44336{% endif %}; color: white; padding: 0.25rem 0.75rem; border-radius: 4px;">
+            {{ order.get_status_display }}
+          </span>
+          <h4 style="margin: 0.5rem 0 0 0;">${{ order.total }}</h4>
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 1rem;">
+        {% for item in order.items.all %}
+        <div style="padding: 0.5rem 0; border-bottom: 1px solid #eee;">
+          <strong>{{ item.product_title }}</strong> x{{ item.quantity }}
+          <span style="float: right;">${{ item.subtotal }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      
+      <div style="text-align: right;">
+        <a href="{% url 'mercado:order-detail' order.id %}" class="btn-retro btn-small">Ver detalle</a>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="retro-panel" style="text-align: center; padding: 3rem;">
+      <p style="color: #666;">Aún no has realizado ninguna compra.</p>
+      <a href="{% url 'mercado:productlist' %}" class="btn-retro">Explorar productos</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

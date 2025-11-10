@@ -1,15 +1,22 @@
 from django import template
-from perfil.utils import get_user_avatar_url
+from django.contrib.auth import get_user_model
 
 register = template.Library()
 
+User = get_user_model()
+
+
 @register.simple_tag
-def user_avatar(user, size=32):
-    """Devuelve una URL segura para el avatar del usuario.
-    Si falla o no tiene perfil/imagen, genera avatar por defecto.
+def user_avatar(user, size=100):
     """
-    try:
-        return get_user_avatar_url(user, size=size)
-    except Exception:
-        username = getattr(user, 'username', 'Anon')
-        return f"https://ui-avatars.com/api/?name={username}&background=random&size={size}"
+    Retorna la URL del avatar del usuario.
+    Si no tiene avatar, usa UI Avatars.
+    
+    Uso: {% user_avatar user 32 %}
+    """
+    if hasattr(user, 'profile') and user.profile.avatar:
+        return user.profile.avatar.url
+    
+    # Generar avatar con iniciales usando UI Avatars
+    username = user.username if user else "U"
+    return f"https://ui-avatars.com/api/?name={username}&size={size}&background=random"

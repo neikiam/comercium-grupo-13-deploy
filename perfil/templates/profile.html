@@ -15,6 +15,16 @@
     <h1 style="margin-bottom: 0.5rem;">{{ profile.user.username }}</h1>
     <p style="color: #666; margin-bottom: 1rem;">{{ profile.bio|default:"Sin biografía" }}</p>
     
+    <!-- Contadores de seguidores/seguidos -->
+    <div style="display: flex; justify-content: center; gap: 2rem; margin-bottom: 1rem;">
+      <a href="{% url 'notifications:followers' profile.user.username %}" style="text-decoration: none; color: inherit;">
+        <strong>{{ followers_count|default:0 }}</strong> seguidores
+      </a>
+      <a href="{% url 'notifications:following' profile.user.username %}" style="text-decoration: none; color: inherit;">
+        <strong>{{ following_count|default:0 }}</strong> siguiendo
+      </a>
+    </div>
+    
     {% if profile.website %}
       <p style="margin-bottom: 1rem;">
         <a href="{{ profile.website }}" target="_blank" rel="noopener" style="color: var(--retro-accent);">🌐 {{ profile.website }}</a>
@@ -23,8 +33,38 @@
     
     {% if is_own_profile %}
       <a href="{% url 'perfil:edit_profile' %}" class="btn-retro">✏️ Editar perfil</a>
+      <a href="{% url 'perfil:mercadopago_settings' %}" class="btn-retro" style="background: #00b1ea; border-color: #0095c8;">💳 Configurar MercadoPago</a>
+      <a href="{% url 'mercado:my-purchases' %}" class="btn-retro">🛍️ Mis compras</a>
+      <a href="{% url 'mercado:my-sales' %}" class="btn-retro">💰 Mis ventas</a>
+      
+      <!-- Estado de conexión de MercadoPago -->
+      {% if profile.has_mercadopago_connected %}
+        <div style="margin-top: 1rem; padding: 0.75rem; background: #d4edda; border: 2px solid #28a745; border-radius: 8px; display: inline-block;">
+          <span style="color: #155724; font-weight: 600;">✓ MercadoPago conectado</span>
+          <small style="display: block; color: #155724; margin-top: 0.25rem;">Puedes recibir pagos directamente</small>
+        </div>
+      {% else %}
+        <div style="margin-top: 1rem; padding: 0.75rem; background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; display: inline-block;">
+          <span style="color: #856404; font-weight: 600;">⚠️ MercadoPago no conectado</span>
+          <small style="display: block; color: #856404; margin-top: 0.25rem;">Conecta tu cuenta para vender productos</small>
+        </div>
+      {% endif %}
     {% else %}
-      <a href="{% url 'chat_interno:private-start' profile.user.id %}" class="btn-retro">💬 Mensaje privado</a>
+      <div style="display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1rem;">
+        <a href="{% url 'chat_interno:private-start' profile.user.id %}" class="btn-retro">💬 Mensaje privado</a>
+        
+        {% if is_following %}
+        <form method="post" action="{% url 'notifications:unfollow' profile.user.id %}" style="display: inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn-retro" style="background: #757575;">✓ Siguiendo</button>
+        </form>
+        {% else %}
+        <form method="post" action="{% url 'notifications:follow' profile.user.id %}" style="display: inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn-retro">➕ Seguir</button>
+        </form>
+        {% endif %}
+      </div>
       
       {% if request.user.is_staff or request.user.is_superuser %}
         <div style="margin-top: 1rem; padding: 1rem; background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px;">

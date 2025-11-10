@@ -6,16 +6,45 @@
   <p style="text-align:center; margin-bottom: 1rem; display:flex; gap:0.5rem; justify-content:center; flex-wrap:wrap;">
     <a class="btn-retro btn-small" href="{% url 'chat_interno:home' %}">⬅ Centro</a>
     <a class="btn-retro btn-small" href="{% url 'perfil:user_profile_view' other.id %}">👤 Ver perfil</a>
+    {% if not blocked_by_me %}
     <form method="post" action="{% url 'chat_interno:block-user' other.id %}">
       {% csrf_token %}
       <button class="btn-retro btn-small" type="submit">🚫 Bloquear</button>
     </form>
+    {% endif %}
   </p>
+
+  {% if is_blocked %}
+    <div class="retro-panel" style="margin-bottom: 1rem; background: #fff3cd; border-color: #ffc107;">
+      {% if blocked_by_other and blocked_by_me %}
+        <p style="margin: 0; color: #856404; text-align: center;">
+          ⚠️ <strong>Bloqueo mutuo:</strong> Ni tú ni {{ other.username }} pueden enviar mensajes.
+        </p>
+      {% elif blocked_by_other %}
+        <p style="margin: 0; color: #856404; text-align: center;">
+          ⚠️ <strong>{{ other.username }} te ha bloqueado.</strong> No puedes enviar mensajes en esta conversación.
+        </p>
+      {% elif blocked_by_me %}
+        <p style="margin: 0; color: #856404; text-align: center;">
+          🚫 <strong>Has bloqueado a {{ other.username }}.</strong> 
+          <a href="{% url 'chat_interno:blocked-list' %}" style="color: #856404; text-decoration: underline;">Desbloquear</a>
+        </p>
+      {% endif %}
+    </div>
+  {% elif not has_accepted_request %}
+    <div id="request-panel" class="retro-panel" style="margin-bottom: 1rem; background: #e3f2fd; border-color: #2196f3;">
+      <p style="margin: 0; color: #1565c0; text-align: center;">
+        ℹ️ <strong>Necesitas una solicitud de chat aceptada para poder escribir.</strong>
+        <button onclick="sendChatRequest()" style="background: none; border: none; color: #1565c0; text-decoration: underline; cursor: pointer; font: inherit;">Enviar solicitud</button>
+      </p>
+    </div>
+  {% endif %}
 
   <div class="retro-panel" style="margin-bottom: 1rem;">
     <div id="chat-box" class="chat-retro"></div>
   </div>
 
+  {% if can_write %}
   <form id="chat-form" class="form-retro">
     {% csrf_token %}
     <div style="display: flex; gap: 0.75rem;">
@@ -23,6 +52,17 @@
       <button type="submit" class="btn-retro btn-small" style="align-self: flex-end;">Enviar</button>
     </div>
   </form>
+  {% else %}
+  <div class="retro-panel" style="text-align: center; background: #f5f5f5; padding: 1.5rem;">
+    <p style="margin: 0; color: #666;">
+      {% if is_blocked %}
+        💬 No puedes enviar mensajes debido al bloqueo.
+      {% else %}
+        💬 No puedes enviar mensajes sin una solicitud de chat aceptada.
+      {% endif %}
+    </p>
+  </div>
+  {% endif %}
 </div>
 
 <script>
@@ -31,6 +71,7 @@ const box = document.getElementById("chat-box");
 const threadId = parseInt('{{ thread.id }}');
 const currentUserId = parseInt('{{ request.user.id }}');
 const privateStartUrlTpl = "{% url 'chat_interno:private-start' 0 %}";
+const canWrite = {{ can_write|yesno:"true,false" }};
 
 function messageRow(m){
   const row = document.createElement('div');
@@ -106,19 +147,57 @@ async function poll(){
 setInterval(poll, 3000);
 poll();
 
-const form = document.getElementById("chat-form");
-form.addEventListener("submit", async (e)=>{
-  e.preventDefault();
-  const text = document.getElementById("chat-text").value;
-  if (!text.trim()) return;
-  const fd = new FormData();
-  fd.append("text", text);
-  fd.append("csrfmiddlewaretoken", document.querySelector('[name=csrfmiddlewaretoken]').value);
-  const resp = await fetch("{% url 'chat_interno:private-post' 0 %}".replace("0", threadId), { method: "POST", body: fd });
-  if (resp.ok){
-    document.getElementById("chat-text").value = "";
-    poll();
+// Solo agregar event listener del formulario si puede escribir
+if (canWrite) {
+  const form = document.getElementById("chat-form");
+  if (form) {
+    form.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      const text = document.getElementById("chat-text").value;
+      if (!text.trim()) return;
+      const fd = new FormData();
+      fd.append("text", text);
+      fd.append("csrfmiddlewaretoken", document.querySelector('[name=csrfmiddlewaretoken]').value);
+      const resp = await fetch("{% url 'chat_interno:private-post' 0 %}".replace("0", threadId), { method: "POST", body: fd });
+      if (resp.ok){
+        document.getElementById("chat-text").value = "";
+        poll();
+      }
+    });
   }
-});
+}
+
+// Función para enviar solicitud de chat
+async function sendChatRequest() {
+  const button = event.target;
+  button.disabled = true;
+  button.textContent = "Enviando...";
+  
+  const fd = new FormData();
+  fd.append("csrfmiddlewaretoken", "{{ csrf_token }}");
+  
+  try {
+    const resp = await fetch("{% url 'chat_interno:request-send' other.id %}", {
+      method: "POST",
+      body: fd
+    });
+    
+    if (resp.ok) {
+      const panel = document.getElementById('request-panel');
+      panel.innerHTML = '<p style="margin: 0; color: #2e7d32; text-align: center;">✓ <strong>Solicitud enviada.</strong> Espera a que {{ other.username }} la acepte.</p>';
+      panel.style.background = '#e8f5e9';
+      panel.style.borderColor = '#4caf50';
+    } else {
+      button.disabled = false;
+      button.textContent = "Enviar solicitud";
+      alert("Error al enviar la solicitud. Por favor, intenta de nuevo.");
+    }
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = "Enviar solicitud";
+    console.error('Error:', error);
+    alert("Error al enviar la solicitud. Por favor, intenta de nuevo.");
+  }
+}
 </script>
 {% endblock %}

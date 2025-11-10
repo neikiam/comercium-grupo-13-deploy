@@ -168,9 +168,7 @@
               div.style.background = 'white';
             });
             div.addEventListener('click', () => {
-              usernameInput.value = user.username;
-              suggestionsBox.style.display = 'none';
-              document.getElementById('search-form').submit();
+              window.location.href = `/profiles/usuario/${user.id}/`;
             });
             suggestionsBox.appendChild(div);
           });

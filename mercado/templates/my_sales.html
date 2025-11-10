@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Mis Ventas{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1000px; margin: 2rem auto;">
+  <h2 style="margin-bottom: 1.5rem;">💰 Mis Ventas</h2>
+
+  {% if sales_by_order %}
+    {% for sale in sales_by_order %}
+    <div class="retro-panel" style="margin-bottom: 1.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 2px solid var(--retro-border); padding-bottom: 1rem;">
+        <div>
+          <h5 style="margin: 0;">Orden #{{ sale.order.id }}</h5>
+          <small style="color: #666;">Comprador: {{ sale.order.buyer.username }} | {{ sale.order.created_at|date:"d/m/Y H:i" }}</small>
+        </div>
+        <div style="text-align: right;">
+          <h4 style="margin: 0;">${{ sale.total }}</h4>
+          <small style="color: #666;">Tus ventas en esta orden</small>
+        </div>
+      </div>
+      
+      <div>
+        {% for item in sale.items %}
+        <div style="padding: 0.5rem 0; border-bottom: 1px solid #eee;">
+          <strong>{{ item.product_title }}</strong> x{{ item.quantity }}
+          <span style="float: right;">${{ item.subtotal }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="retro-panel" style="text-align: center; padding: 3rem;">
+      <p style="color: #666;">Aún no has vendido ningún producto.</p>
+      <a href="{% url 'mercado:productcreate' %}" class="btn-retro">Publicar producto</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

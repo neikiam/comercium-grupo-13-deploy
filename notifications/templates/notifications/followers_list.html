@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Seguidores de {{ profile_user.username }}{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px; margin: 2rem auto;">
+  <h2 style="margin-bottom: 1.5rem;">Seguidores de {{ profile_user.username }}</h2>
+
+  {% if followers %}
+    <div class="retro-panel">
+      {% for follow in followers %}
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid #eee;">
+        <div>
+          <a href="{% url 'perfil:user_profile_view' follow.follower.id %}" style="font-weight: 600; text-decoration: none;">
+            {{ follow.follower.username }}
+          </a>
+          <small style="display: block; color: #666;">Siguiendo desde {{ follow.created_at|date:"d/m/Y" }}</small>
+        </div>
+        <a href="{% url 'perfil:user_profile_view' follow.follower.id %}" class="btn-retro btn-small">Ver perfil</a>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="retro-panel" style="text-align: center; padding: 3rem;">
+      <p style="color: #666;">{{ profile_user.username }} no tiene seguidores aún.</p>
+    </div>
+  {% endif %}
+  
+  <div style="margin-top: 1.5rem; text-align: center;">
+    <a href="{% url 'perfil:user_profile_view' profile_user.id %}" class="btn-retro">← Volver al perfil</a>
+  </div>
+</div>
+{% endblock %}

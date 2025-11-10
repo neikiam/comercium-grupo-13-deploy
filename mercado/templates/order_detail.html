@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Orden #{{ order.id }}{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px; margin: 2rem auto;">
+  <div class="retro-panel">
+    <h2 style="margin-bottom: 1.5rem;">📦 Orden #{{ order.id }}</h2>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 2px solid var(--retro-border);">
+      <div>
+        <label style="font-weight: 600; display: block; margin-bottom: 0.25rem;">Estado:</label>
+        <span class="badge" style="background: {% if order.status == 'paid' %}#4caf50{% elif order.status == 'pending' %}#ff9800{% else %}#f44336{% endif %}; color: white; padding: 0.25rem 0.75rem; border-radius: 4px;">
+          {{ order.get_status_display }}
+        </span>
+      </div>
+      
+      <div>
+        <label style="font-weight: 600; display: block; margin-bottom: 0.25rem;">Fecha:</label>
+        <span>{{ order.created_at|date:"d/m/Y H:i" }}</span>
+      </div>
+      
+      {% if is_buyer %}
+      <div>
+        <label style="font-weight: 600; display: block; margin-bottom: 0.25rem;">Comprador:</label>
+        <span>{{ order.buyer.username }}</span>
+      </div>
+      {% endif %}
+      
+      {% if order.payment_id %}
+      <div>
+        <label style="font-weight: 600; display: block; margin-bottom: 0.25rem;">ID de Pago:</label>
+        <span style="font-family: monospace; font-size: 0.9em;">{{ order.payment_id }}</span>
+      </div>
+      {% endif %}
+    </div>
+    
+    <h4 style="margin-bottom: 1rem;">Productos:</h4>
+    
+    <div style="margin-bottom: 1.5rem;">
+      {% for item in items %}
+      <div style="padding: 1rem 0; border-bottom: 1px solid #eee;">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+          <div>
+            <h6 style="margin: 0 0 0.5rem 0;">{{ item.product_title }}</h6>
+            <small style="color: #666;">Vendedor: {{ item.seller.username }}</small>
+          </div>
+          <div style="text-align: right;">
+            <div style="margin-bottom: 0.25rem;">{{ item.quantity }} x ${{ item.product_price }}</div>
+            <strong>${{ item.subtotal }}</strong>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    
+    <div style="text-align: right; padding: 1rem 0; border-top: 2px solid var(--retro-border);">
+      <h3 style="margin: 0; color: var(--retro-accent);">Total: ${{ order.total }}</h3>
+    </div>
+    
+    <div style="margin-top: 1.5rem; text-align: center;">
+      {% if is_buyer %}
+      <a href="{% url 'mercado:my-purchases' %}" class="btn-retro">← Volver a mis compras</a>
+      {% elif is_seller %}
+      <a href="{% url 'mercado:my-sales' %}" class="btn-retro">← Volver a mis ventas</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

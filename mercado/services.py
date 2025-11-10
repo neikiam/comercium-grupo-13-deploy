@@ -7,7 +7,7 @@ import logging
 from django.contrib import messages
 from django.db import transaction
 
-from .models import Cart, CartItem, Product
+from .models import Cart, CartItem, Product, Order, OrderItem
 
 logger = logging.getLogger(__name__)
 
@@ -226,3 +226,141 @@ class ProductService:
         seller_id = product.seller.id
         product.delete()
         logger.info(f"Producto {product_id} eliminado por usuario {seller_id}")
+
+
+class OrderService:
+    """Servicio para operaciones de órdenes de compra."""
+    
+    @staticmethod
+    @transaction.atomic
+    def create_order_from_cart(cart, payment_id=None, preference_id=None):
+        """
+        Crea una orden a partir del carrito actual.
+        
+        Args:
+            cart: Instancia de Cart
+            payment_id: ID del pago de MercadoPago (opcional)
+            preference_id: ID de la preferencia de MercadoPago (opcional)
+        
+        Returns:
+            Instancia de Order creada
+        """
+        from notifications.services import NotificationService
+        
+        cart_items = cart.items.select_related('product', 'product__seller').all()
+        
+        if not cart_items:
+            raise ValueError("El carrito está vacío")
+        
+        # Crear la orden
+        order = Order.objects.create(
+            buyer=cart.user,
+            total=cart.total(),
+            status=Order.STATUS_PAID if payment_id else Order.STATUS_PENDING,
+            payment_id=payment_id,
+            preference_id=preference_id
+        )
+        
+        # Crear items de la orden y reducir stock
+        sellers_notified = set()
+        
+        for cart_item in cart_items:
+            product = cart_item.product
+            
+            # Verificar stock antes de procesar
+            if cart_item.quantity > product.stock:
+                raise ValueError(f"Stock insuficiente para {product.title}")
+            
+            # Crear item de orden
+            OrderItem.objects.create(
+                order=order,
+                product=product,
+                seller=product.seller,
+                product_title=product.title,
+                product_price=product.price,
+                quantity=cart_item.quantity
+            )
+            
+            # Reducir stock
+            product.stock -= cart_item.quantity
+            product.save(update_fields=['stock'])
+            
+            # Notificar vendedor (una vez por vendedor)
+            if product.seller.id not in sellers_notified:
+                NotificationService.create_sale_notification(product.seller, order)
+                sellers_notified.add(product.seller.id)
+            
+            # Notificaciones de stock
+            if product.stock == 0:
+                NotificationService.create_sold_out_notification(product)
+            elif product.stock <= 5:
+                NotificationService.create_low_stock_notification(product)
+            
+            logger.info(f"Stock reducido para producto {product.id}: {product.stock} restantes")
+        
+        # Vaciar el carrito
+        cart.items.all().delete()
+        logger.info(f"Orden {order.id} creada para usuario {cart.user.id} con {len(cart_items)} items")
+        
+        return order
+    
+    @staticmethod
+    def get_user_purchases(user):
+        """Obtiene las órdenes de compra de un usuario."""
+        return Order.objects.filter(buyer=user).prefetch_related('items', 'items__product')
+    
+    @staticmethod
+    def get_user_sales(user):
+        """Obtiene las ventas de un usuario."""
+        return OrderItem.objects.filter(seller=user).select_related('order', 'order__buyer', 'product').order_by('-order__created_at')
+    
+    @staticmethod
+    @transaction.atomic
+    def verify_and_process_payment(payment_id, access_token):
+        """
+        Verifica un pago con MercadoPago y procesa la orden si es válido.
+        
+        Args:
+            payment_id: ID del pago en MercadoPago
+            access_token: Access token de MercadoPago
+        
+        Returns:
+            Tupla (success: bool, order: Order or None, message: str)
+        """
+        import mercadopago
+        
+        # Verificar si ya existe una orden con este payment_id
+        existing_order = Order.objects.filter(payment_id=payment_id).first()
+        if existing_order:
+            logger.warning(f"Payment ID {payment_id} ya fue procesado (orden #{existing_order.id})")
+            return True, existing_order, "Pago ya procesado"
+        
+        # Consultar el pago a MercadoPago
+        sdk = mercadopago.SDK(access_token)
+        
+        try:
+            payment_info = sdk.payment().get(payment_id)
+            response = payment_info.get("response", {})
+            
+            if not response:
+                logger.error(f"MercadoPago no devolvió información para payment_id {payment_id}")
+                return False, None, "No se pudo verificar el pago"
+            
+            status = response.get("status")
+            
+            if status != "approved":
+                logger.warning(f"Payment {payment_id} no está aprobado. Estado: {status}")
+                return False, None, f"El pago no está aprobado (estado: {status})"
+            
+            # Extraer información del pago
+            external_reference = response.get("external_reference")
+            payment_type = response.get("payment_type_id")
+            
+            logger.info(f"Payment {payment_id} verificado exitosamente. Estado: {status}")
+            
+            return True, None, "Pago verificado exitosamente"
+            
+        except Exception as e:
+            logger.exception(f"Error al verificar payment {payment_id}: {e}")
+            return False, None, f"Error al verificar el pago: {str(e)}"
+

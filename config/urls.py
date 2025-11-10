@@ -13,6 +13,7 @@ urlpatterns = [
     path("profiles/", include("perfil.urls")),
     path("user-activity/", include("user_activity.urls")),
     path("chat/", include("chat_interno.urls")),
+    path("notifications/", include("notifications.urls")),
     path("favicon.ico", RedirectView.as_view(url=static_tag('favicon.svg'), permanent=True)),
 ]
 

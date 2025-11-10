@@ -123,11 +123,40 @@ def private_chat(request, thread_id: int):
     thread = get_object_or_404(DirectMessageThread, id=thread_id)
     if request.user not in thread.participants():
         return HttpResponseForbidden()
-    # Bloqueo: prohibimos acceder al chat si hay bloqueo en cualquier dirección
-    if _is_blocked(thread.user1, thread.user2):
-        return HttpResponseForbidden("No puedes acceder a esta conversación debido a un bloqueo.")
+    
     other = thread.user1 if thread.user2 == request.user else thread.user2
-    return render(request, "private_chat.html", {"thread": thread, "other": other})
+    
+    # Detectar si hay bloqueo
+    is_blocked = _is_blocked(thread.user1, thread.user2)
+    blocked_by_other = False
+    blocked_by_me = False
+    
+    if is_blocked:
+        # Determinar quién bloqueó a quién
+        blocked_by_other = BlockedUser.objects.filter(blocker=other, blocked=request.user).exists()
+        blocked_by_me = BlockedUser.objects.filter(blocker=request.user, blocked=other).exists()
+    
+    # Verificar si hay una solicitud aceptada válida (incluso sin bloqueo)
+    has_accepted_request = ChatRequest.objects.filter(
+        (
+            Q(requester=request.user, target=other) |
+            Q(requester=other, target=request.user)
+        ),
+        status=ChatRequest.STATUS_ACCEPTED,
+    ).exists()
+    
+    # Se puede escribir solo si NO hay bloqueo Y hay solicitud aceptada
+    can_write = not is_blocked and has_accepted_request
+    
+    return render(request, "private_chat.html", {
+        "thread": thread, 
+        "other": other,
+        "is_blocked": is_blocked,
+        "blocked_by_other": blocked_by_other,
+        "blocked_by_me": blocked_by_me,
+        "can_write": can_write,
+        "has_accepted_request": has_accepted_request
+    })
 
 
 @login_required
@@ -136,16 +165,17 @@ def private_start(request, user_id: int):
     other = get_object_or_404(User, id=user_id)
     if other == request.user:
         return redirect("chat_interno:private-list")
+    
     # Bloqueo: si cualquiera bloqueó a la otra parte, no permitir
     if _is_blocked(request.user, other):
-        messages.error(request, "No puedes iniciar chat con este usuario porque existe un bloqueo.")
+        messages.error(request, "No puedes iniciar un chat con este usuario debido a un bloqueo mutuo.")
+        # Redirigir al perfil del usuario o a la página anterior
+        referer = request.META.get('HTTP_REFERER')
+        if referer and 'profiles' in referer:
+            return redirect("perfil:user_profile_view", user_id=user_id)
         return redirect("chat_interno:private-list")
-    a, b = (request.user, other) if request.user.id < other.id else (other, request.user)
-    thread = DirectMessageThread.objects.filter(user1=a, user2=b).first()
-    if thread:
-        return redirect("chat_interno:private-chat", thread_id=thread.id)
-    # Si no existe hilo, requerimos solicitud aceptada
-    # ¿Existe una solicitud aceptada entre ambos?
+    
+    # Verificar si existe una solicitud aceptada entre ambos
     has_accepted = ChatRequest.objects.filter(
         (
             Q(requester=request.user, target=other) |
@@ -153,13 +183,28 @@ def private_start(request, user_id: int):
         ),
         status=ChatRequest.STATUS_ACCEPTED,
     ).exists()
+    
+    # Si hay solicitud aceptada, crear o redirigir al hilo
     if has_accepted:
+        a, b = (request.user, other) if request.user.id < other.id else (other, request.user)
+        thread = DirectMessageThread.objects.filter(user1=a, user2=b).first()
+        if thread:
+            return redirect("chat_interno:private-chat", thread_id=thread.id)
         try:
             thread = DirectMessageThread.objects.create(user1=a, user2=b)
         except IntegrityError:
             thread = DirectMessageThread.objects.get(user1=a, user2=b)
         return redirect("chat_interno:private-chat", thread_id=thread.id)
-    # Enviar o reiterar solicitud
+    
+    # Si no hay solicitud aceptada pero existe un hilo, significa que hubo un bloqueo/desbloqueo
+    # Redirigir al hilo para que vean que no pueden escribir
+    a, b = (request.user, other) if request.user.id < other.id else (other, request.user)
+    thread = DirectMessageThread.objects.filter(user1=a, user2=b).first()
+    if thread:
+        messages.warning(request, "Necesitas una solicitud de chat aceptada para poder escribir mensajes.")
+        return redirect("chat_interno:private-chat", thread_id=thread.id)
+    
+    # No hay hilo ni solicitud aceptada, enviar o reiterar solicitud
     ChatRequest.objects.get_or_create(requester=request.user, target=other, status=ChatRequest.STATUS_REQUESTED)
     messages.info(request, "Solicitud de chat enviada. Espera la aceptación del usuario.")
     return redirect("chat_interno:requests-list")
@@ -219,32 +264,8 @@ def private_start_by_username(request):
     if other == request.user:
         return redirect("chat_interno:private-list")
     
-    # Bloqueo
-    if _is_blocked(request.user, other):
-        messages.error(request, "No puedes iniciar chat con este usuario porque existe un bloqueo.")
-        return redirect("chat_interno:private-list")
-    a, b = (request.user, other) if request.user.id < other.id else (other, request.user)
-    thread = DirectMessageThread.objects.filter(user1=a, user2=b).first()
-    if thread:
-        return redirect("chat_interno:private-chat", thread_id=thread.id)
-    # Verificar solicitud aceptada
-    has_accepted = ChatRequest.objects.filter(
-        (
-            Q(requester=request.user, target=other) |
-            Q(requester=other, target=request.user)
-        ),
-        status=ChatRequest.STATUS_ACCEPTED,
-    ).exists()
-    if has_accepted:
-        try:
-            thread = DirectMessageThread.objects.create(user1=a, user2=b)
-        except IntegrityError:
-            thread = DirectMessageThread.objects.get(user1=a, user2=b)
-        return redirect("chat_interno:private-chat", thread_id=thread.id)
-    # Enviar solicitud si no existe
-    ChatRequest.objects.get_or_create(requester=request.user, target=other, status=ChatRequest.STATUS_REQUESTED)
-    messages.info(request, "Solicitud de chat enviada. Espera la aceptación del usuario.")
-    return redirect("chat_interno:requests-list")
+    # Redirigir al perfil del usuario en lugar de enviar solicitud automática
+    return redirect("perfil:user_profile_view", user_id=other.id)
 
 
 @login_required
@@ -356,7 +377,7 @@ def private_post_message_api(request, thread_id: int):
     if request.user not in thread.participants():
         return HttpResponseForbidden()
     if _is_blocked(thread.user1, thread.user2):
-        return HttpResponseForbidden()
+        return JsonResponse({"error": "blocked", "message": "No puedes enviar mensajes debido a un bloqueo."}, status=403)
     
     text = request.POST.get("text", "").strip()
     if not text:
@@ -384,13 +405,39 @@ def requests_list(request):
 def request_send(request, user_id: int):
     User = get_user_model()
     other = get_object_or_404(User, id=user_id)
+    
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
     if other == request.user:
+        if is_ajax:
+            return JsonResponse({"error": "No puedes enviarte una solicitud a ti mismo."}, status=400)
+        messages.warning(request, "No puedes enviarte una solicitud de chat a ti mismo.")
+        referer = request.META.get('HTTP_REFERER')
+        if referer:
+            return redirect(referer)
         return redirect("chat_interno:requests-list")
+    
     if _is_blocked(request.user, other):
-        messages.error(request, "No puedes enviar solicitud debido a un bloqueo.")
+        if is_ajax:
+            return JsonResponse({"error": "No puedes enviar una solicitud debido a un bloqueo mutuo."}, status=403)
+        messages.error(request, "No puedes enviar una solicitud de chat debido a un bloqueo mutuo.")
+        # Redirigir a la página anterior (probablemente el perfil)
+        referer = request.META.get('HTTP_REFERER')
+        if referer and 'profiles' in referer:
+            return redirect("perfil:user_profile_view", user_id=user_id)
         return redirect("chat_interno:requests-list")
+    
     ChatRequest.objects.get_or_create(requester=request.user, target=other, status=ChatRequest.STATUS_REQUESTED)
-    messages.success(request, "Solicitud de chat enviada.")
+    
+    if is_ajax:
+        return JsonResponse({"success": True, "message": f"Solicitud enviada a {other.username}"})
+    
+    messages.success(request, f"Solicitud de chat enviada a {other.username}.")
+    
+    # Redirigir a la página anterior
+    referer = request.META.get('HTTP_REFERER')
+    if referer and 'profiles' in referer:
+        return redirect("perfil:user_profile_view", user_id=user_id)
     return redirect("chat_interno:requests-list")
 
 
@@ -399,12 +446,19 @@ def request_send(request, user_id: int):
 def request_accept(request, request_id: int):
     cr = get_object_or_404(ChatRequest, id=request_id, target=request.user)
     if _is_blocked(request.user, cr.requester):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({"error": "No puedes aceptar: existe un bloqueo."}, status=400)
         messages.error(request, "No puedes aceptar: existe un bloqueo.")
         return redirect("chat_interno:requests-list")
+    
     cr.accept()
     # Crear hilo si no existe
     a, b = (cr.requester, cr.target) if cr.requester.id < cr.target.id else (cr.target, cr.requester)
     thread, _ = DirectMessageThread.objects.get_or_create(user1=a, user2=b)
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({"success": True, "thread_id": thread.id})
+    
     messages.success(request, "Solicitud aceptada. Conversación creada.")
     return redirect("chat_interno:private-chat", thread_id=thread.id)
 
@@ -414,6 +468,10 @@ def request_accept(request, request_id: int):
 def request_decline(request, request_id: int):
     cr = get_object_or_404(ChatRequest, id=request_id, target=request.user)
     cr.decline()
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({"success": True})
+    
     messages.info(request, "Solicitud rechazada.")
     return redirect("chat_interno:requests-list")
 
@@ -434,12 +492,13 @@ def block_user(request, user_id: int):
     if other == request.user:
         return redirect("chat_interno:blocked-list")
     BlockedUser.objects.get_or_create(blocker=request.user, blocked=other)
-    # Opcional: invalidar solicitudes pendientes entre ambos
+    
+    # Invalidar TODAS las solicitudes entre ambos (pendientes Y aceptadas)
     ChatRequest.objects.filter(
-        Q(requester=request.user, target=other) | Q(requester=other, target=request.user),
-        status=ChatRequest.STATUS_REQUESTED,
+        Q(requester=request.user, target=other) | Q(requester=other, target=request.user)
     ).update(status=ChatRequest.STATUS_DECLINED)
-    messages.success(request, "Usuario bloqueado.")
+    
+    messages.success(request, f"Usuario {other.username} bloqueado.")
     return redirect("chat_interno:blocked-list")
 
 
@@ -449,5 +508,13 @@ def unblock_user(request, user_id: int):
     User = get_user_model()
     other = get_object_or_404(User, id=user_id)
     BlockedUser.objects.filter(blocker=request.user, blocked=other).delete()
-    messages.success(request, "Usuario desbloqueado.")
+    
+    # Invalidar solicitudes de chat aceptadas entre ambos
+    # Para que tengan que volver a enviar solicitud
+    ChatRequest.objects.filter(
+        Q(requester=request.user, target=other) | Q(requester=other, target=request.user),
+        status=ChatRequest.STATUS_ACCEPTED,
+    ).update(status=ChatRequest.STATUS_DECLINED)
+    
+    messages.success(request, f"Usuario {other.username} desbloqueado. Deberán enviarse solicitudes de chat nuevamente.")
     return redirect("chat_interno:blocked-list")

@@ -20,4 +20,9 @@ urlpatterns = [
     path("pago-carrito/", views.create_preference_cart, name="crear-preferencia-carrito"),
     path("pago-exitoso/", views.payment_success, name="pago-exitoso"),
     path("pago-fallido/", views.payment_failure, name="pago-fallido"),
+    path("webhook/", views.mercadopago_webhook, name="mercadopago-webhook"),
+    
+    path("mis-compras/", views.my_purchases, name="my-purchases"),
+    path("mis-ventas/", views.my_sales, name="my-sales"),
+    path("orden/<int:order_id>/", views.order_detail, name="order-detail"),
 ]

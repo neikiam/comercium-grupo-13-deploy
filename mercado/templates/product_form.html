@@ -8,6 +8,28 @@
       {% if form.instance.pk %}✏️ Editar producto{% else %}➕ Publicar nuevo producto{% endif %}
     </h2>
     
+    <!-- Advertencia de MercadoPago en producción -->
+    {% if not is_edit and not is_debug and not mp_connected %}
+      <div style="background: #ffebee; border: 2px solid #f44336; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
+        <h4 style="margin: 0 0 0.75rem 0; color: #c62828;">⚠️ MercadoPago no conectado</h4>
+        <p style="margin: 0 0 1rem 0; color: #c62828;">
+          Debes conectar tu cuenta de MercadoPago antes de publicar productos para poder recibir pagos.
+        </p>
+        <a href="{% url 'perfil:mercadopago_settings' %}" class="btn-retro" style="background: #00b1ea; border-color: #0095c8;">
+          💳 Conectar MercadoPago ahora
+        </a>
+      </div>
+    {% endif %}
+    
+    <!-- Info en desarrollo -->
+    {% if not is_edit and is_debug and not mp_connected %}
+      <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+        <p style="margin: 0; color: #856404; font-size: 0.9rem;">
+          <strong>ℹ️ Modo desarrollo:</strong> En producción se requerirá conectar MercadoPago antes de publicar productos.
+        </p>
+      </div>
+    {% endif %}
+    
     <p style="text-align: center; color: #666; margin-bottom: 1.5rem; font-size: 0.9rem;">
       Los campos marcados con <strong>*</strong> son obligatorios.
       {% if is_edit %}
@@ -186,6 +208,13 @@
         <p style="color: #666; font-size: 0.85rem; margin-top: 0.5rem;">
           Puedes seleccionar múltiples archivos a la vez. Estas imágenes aparecerán en el carrusel del producto.
         </p>
+        
+        <div id="additional-images-preview" style="display: none; margin-top: 1rem; padding: 1rem; background: #f0f8ff; border: 2px dashed var(--retro-accent); border-radius: 8px;">
+          <h4 style="margin: 0 0 1rem 0; color: var(--retro-accent);">📷 Imágenes adicionales actuales</h4>
+          <div id="preview-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 1rem;">
+          </div>
+          <p style="margin: 1rem 0 0 0; font-size: 0.85rem; color: #666;">Haz click en ✕ para eliminar una imagen antes de publicar.</p>
+        </div>
       </div>
 
       <div style="display: flex; gap: 0.75rem;">
@@ -292,5 +321,71 @@
     });
   });
   {% endif %}
+
+  const additionalImagesInput = document.getElementById('id_additional_images');
+  const additionalPreviewContainer = document.getElementById('additional-images-preview');
+  const previewGrid = document.getElementById('preview-grid');
+  
+  let selectedFiles = [];
+  
+  if (additionalImagesInput) {
+    additionalImagesInput.addEventListener('change', function(e) {
+      const files = Array.from(e.target.files);
+      
+      if (files.length > 0) {
+        selectedFiles = files;
+        previewGrid.innerHTML = '';
+        selectedFiles.forEach((file, index) => {
+          const reader = new FileReader();
+          
+          reader.onload = function(event) {
+            const previewItem = document.createElement('div');
+            previewItem.className = 'preview-image-item';
+            previewItem.style.cssText = 'position: relative; border: 2px solid #ddd; border-radius: 8px; overflow: hidden; aspect-ratio: 1/1;';
+            
+            previewItem.innerHTML = `
+              <img src="${event.target.result}" alt="Preview ${index + 1}" style="width: 100%; height: 100%; object-fit: cover;">
+              <button type="button" class="remove-preview-btn" data-index="${index}" style="position: absolute; top: 4px; right: 4px; background: rgba(220, 53, 69, 0.9); color: white; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.3);" title="Eliminar imagen">×</button>
+            `;
+            
+            previewGrid.appendChild(previewItem);
+          };
+          
+          reader.readAsDataURL(file);
+        });
+        
+        additionalPreviewContainer.style.display = 'block';
+      } else {
+        additionalPreviewContainer.style.display = 'none';
+        selectedFiles = [];
+      }
+    });
+    previewGrid.addEventListener('click', function(e) {
+      if (e.target.classList.contains('remove-preview-btn')) {
+        const indexToRemove = parseInt(e.target.getAttribute('data-index'));
+        selectedFiles.splice(indexToRemove, 1);
+        const dataTransfer = new DataTransfer();
+        selectedFiles.forEach(file => {
+          dataTransfer.items.add(file);
+        });
+        additionalImagesInput.files = dataTransfer.files;
+        if (selectedFiles.length === 0) {
+          additionalPreviewContainer.style.display = 'none';
+          previewGrid.innerHTML = '';
+        } else {
+          const previewItem = e.target.closest('.preview-image-item');
+          previewItem.style.transition = 'opacity 0.3s, transform 0.3s';
+          previewItem.style.opacity = '0';
+          previewItem.style.transform = 'scale(0.8)';
+          setTimeout(() => {
+            previewItem.remove();
+            document.querySelectorAll('.remove-preview-btn').forEach((btn, newIndex) => {
+              btn.setAttribute('data-index', newIndex);
+            });
+          }, 300);
+        }
+      }
+    });
+  }
 </script>
 {% endblock %}

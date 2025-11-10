@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Notificaciones{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px; margin: 2rem auto;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h2>🔔 Notificaciones</h2>
+    {% if notifications %}
+    <button id="mark-all-read" class="btn-retro btn-small">Marcar todas como leídas</button>
+    {% endif %}
+  </div>
+
+  {% if notifications %}
+    <div class="retro-panel">
+      {% for notification in notifications %}
+      <div style="padding: 1rem; border-bottom: 1px solid #eee; {% if not notification.is_read %}background: #f0f8ff;{% endif %}">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+          <div style="flex: 1;">
+            <h6 style="margin: 0 0 0.5rem 0; {% if not notification.is_read %}font-weight: 700;{% endif %}">
+              {{ notification.title }}
+            </h6>
+            <p style="margin: 0 0 0.5rem 0; color: #666;">{{ notification.message }}</p>
+            <small style="color: #999;">{{ notification.created_at|timesince }} atrás</small>
+          </div>
+          <div style="margin-left: 1rem;">
+            {% if notification.link %}
+            <a href="{{ notification.link }}" class="btn-retro btn-small">Ver</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="retro-panel" style="text-align: center; padding: 3rem;">
+      <p style="color: #666;">No tienes notificaciones.</p>
+    </div>
+  {% endif %}
+</div>
+
+<script>
+document.getElementById('mark-all-read')?.addEventListener('click', function() {
+  fetch('{% url "notifications:mark-all-read" %}', {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': '{{ csrf_token }}',
+      'Content-Type': 'application/json'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      location.reload();
+    }
+  });
+});
+</script>
+{% endblock %}
