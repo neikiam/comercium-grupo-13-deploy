@@ -8,20 +8,20 @@
   <div class="retro-panel" style="margin-bottom: 1rem;">
     <h3>Recibidas</h3>
     {% if incoming %}
-      <ul style="list-style:none; padding:0; margin:0;">
+      <ul id="incoming-list" style="list-style:none; padding:0; margin:0;">
         {% for cr in incoming %}
-          <li style="padding:0.75rem 0; border-bottom:1px solid var(--retro-border); display:flex; align-items:center; gap:0.75rem;">
+          <li id="request-{{ cr.id }}" style="padding:0.75rem 0; border-bottom:1px solid var(--retro-border); display:flex; align-items:center; gap:0.75rem;">
             {% if cr.requester.profile.avatar %}
               <img src="{{ cr.requester.profile.avatar.url }}" alt="{{ cr.requester.username }}" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--retro-border);">
             {% else %}
               <img src="https://ui-avatars.com/api/?name={{ cr.requester.username }}&background=random&size=40" alt="{{ cr.requester.username }}" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--retro-border);">
             {% endif %}
             <a href="{% url 'perfil:user_profile_view' cr.requester.id %}" class="nav-link-retro" style="flex:1;">👤 {{ cr.requester.username }}</a>
-            <form method="post" action="{% url 'chat_interno:request-accept' cr.id %}">
+            <form method="post" action="{% url 'chat_interno:request-accept' cr.id %}" onsubmit="return handleRequestAction(event, {{ cr.id }}, 'accept')">
               {% csrf_token %}
               <button class="btn-retro btn-small" type="submit">✅ Aceptar</button>
             </form>
-            <form method="post" action="{% url 'chat_interno:request-decline' cr.id %}">
+            <form method="post" action="{% url 'chat_interno:request-decline' cr.id %}" onsubmit="return handleRequestAction(event, {{ cr.id }}, 'decline')">
               {% csrf_token %}
               <button class="btn-retro btn-small" type="submit">❌ Rechazar</button>
             </form>
@@ -33,7 +33,7 @@
         {% endfor %}
       </ul>
     {% else %}
-      <p style="margin:0; color:#666;">No tienes solicitudes recibidas.</p>
+      <p id="no-incoming" style="margin:0; color:#666;">No tienes solicitudes recibidas.</p>
     {% endif %}
   </div>
 
@@ -62,4 +62,69 @@
     {% endif %}
   </div>
 </div>
+
+<script>
+function handleRequestAction(event, requestId, action) {
+  event.preventDefault();
+  const form = event.target;
+  const formData = new FormData(form);
+  const button = form.querySelector('button[type="submit"]');
+  
+  // Deshabilitar botón mientras se procesa
+  button.disabled = true;
+  button.textContent = action === 'accept' ? '⏳ Aceptando...' : '⏳ Rechazando...';
+  
+  fetch(form.action, {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+    return response.json();
+  })
+  .then(data => {
+    if (data.success) {
+      // Remover el elemento de la lista con animación
+      const requestElement = document.getElementById('request-' + requestId);
+      if (requestElement) {
+        requestElement.style.opacity = '0';
+        requestElement.style.transition = 'opacity 0.3s';
+        
+        setTimeout(() => {
+          requestElement.remove();
+          
+          // Si no quedan más solicitudes, mostrar mensaje
+          const list = document.getElementById('incoming-list');
+          if (list && list.children.length === 0) {
+            list.innerHTML = '<p id="no-incoming" style="margin:0; color:#666;">No tienes solicitudes recibidas.</p>';
+          }
+          
+          // Si es aceptar, redirigir al chat
+          if (action === 'accept' && data.thread_id) {
+            window.location.href = `/chat/private/${data.thread_id}/`;
+          }
+        }, 300);
+      }
+    } else if (data.error) {
+      alert(data.error);
+      button.disabled = false;
+      button.textContent = action === 'accept' ? '✅ Aceptar' : '❌ Rechazar';
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    // Si falla el AJAX, enviar formulario normalmente
+    button.disabled = false;
+    button.textContent = action === 'accept' ? '✅ Aceptar' : '❌ Rechazar';
+    form.submit();
+  });
+  
+  return false;
+}
+</script>
 {% endblock %}

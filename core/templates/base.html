@@ -26,13 +26,17 @@
         <li>
           <a class="nav-link-retro" href="{% url 'mercado:view-cart' %}">🛒 Carrito{% if cart_count %} <span style="display:inline-block; min-width: 20px; padding: 0 6px; height: 20px; line-height: 20px; text-align:center; background: var(--retro-accent); color: #fff; border-radius: 10px; font-size: 0.8rem; margin-left: 6px;">{{ cart_count }}</span>{% endif %}</a>
         </li>
+        <li>
+          <a class="nav-link-retro" href="{% url 'notifications:list' %}">🔔 Notificaciones{% if unread_notifications_count %} <span style="display:inline-block; min-width: 20px; padding: 0 6px; height: 20px; line-height: 20px; text-align:center; background: #f44336; color: #fff; border-radius: 10px; font-size: 0.8rem; margin-left: 6px;">{{ unread_notifications_count }}</span>{% endif %}</a>
+        </li>
+        <li><a class="nav-link-retro" href="{% url 'notifications:feed' %}">📰 Feed</a></li>
         {% endif %}
         {% if user.is_authenticated %}
-          <li><a class="nav-link-retro" href="{% url 'chat_interno:chat' %}">💬 Chat</a></li>
+          <li><a class="nav-link-retro" href="{% url 'chat_interno:home' %}">💬 Chat</a></li>
         {% endif %}
 
         {% if user.is_authenticated %}
-          <li><a class="nav-link-retro" href="{% url 'chat_interno:private-list' %}">💬 Chats privados</a></li>
+          <li><a class="nav-link-retro" href="{% url 'chat_interno:private-list' %}">👥 Comunidad</a></li>
           <li style="color: var(--retro-panel);">Hola, {{ user.first_name|default:user.username }}</li>
           
           <li>
@@ -48,7 +52,7 @@
             </form>
           </li>
         {% else %}
-          <li><a href="{% url 'login' %}" class="btn-retro btn-retro-small">Ingresar</a></li>
+          <li><a href="{% url 'account_login' %}" class="btn-retro btn-retro-small">Ingresar</a></li>
           <li><a href="{% url 'account_signup' %}" class="btn-retro btn-retro-small" style="background: var(--retro-success); border-color: var(--retro-success);">Registrarse</a></li>
         {% endif %}
       </ul>

@@ -1,4 +1,6 @@
 import logging
+import hmac
+import hashlib
 
 import mercadopago
 from django.conf import settings
@@ -8,17 +10,21 @@ from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 from PIL import Image
 
 from .forms import ProductForm
-from .models import Cart, CartItem, Product, ProductImage
-from .services import CartService, ProductService
+from .models import Cart, CartItem, Product, ProductImage, Order, OrderItem
+from .services import CartService, ProductService, OrderService
+from notifications.services import NotificationService
 
 logger = logging.getLogger(__name__)
+
+PRODUCTS_PER_PAGE = 12
 
 
 def validate_additional_image(image_file):
@@ -67,7 +73,7 @@ def product_list(request):
     query = request.GET.get('q')
 
     if query:
-        products = products.filter(
+        queryset = queryset.filter(
             Q(title__icontains=query) |
             Q(description__icontains=query) |
             Q(marca__icontains=query) |
@@ -76,13 +82,13 @@ def product_list(request):
 
     # Ordenamiento: recent (default), oldest, price_asc, price_desc
     if order == "price_asc":
-        products = products.order_by('price')
+        queryset = queryset.order_by('price')
     elif order == "price_desc":
-        products = products.order_by('-price')
+        queryset = queryset.order_by('-price')
     elif order == "oldest":
-        products = products.order_by('created_at')
+        queryset = queryset.order_by('created_at')
     else:
-        products = products.order_by('-created_at')
+        queryset = queryset.order_by('-created_at')
 
     all_categories = Product.CATEGORY_CHOICES
 
@@ -129,6 +135,7 @@ def product_detail(request, pk: int):
 def product_create(request):
     """
     Permite a usuarios autenticados crear nuevos productos para vender.
+    REQUIERE que el usuario tenga MercadoPago conectado en producción.
     
     Args:
         request: HttpRequest (POST con form data o GET para mostrar formulario)
@@ -136,6 +143,16 @@ def product_create(request):
     Returns:
         HttpResponse con formulario o redirect a lista de productos
     """
+    # Verificar si MercadoPago está conectado (solo en producción)
+    profile = request.user.profile
+    if not settings.DEBUG and not profile.has_mercadopago_connected:
+        messages.error(
+            request, 
+            "Debes conectar tu cuenta de MercadoPago antes de publicar productos. "
+            "Ve a tu perfil → Configurar MercadoPago."
+        )
+        return redirect("perfil:mercadopago_settings")
+    
     if request.method == "POST":
         form = ProductForm(request.POST, request.FILES)
         if form.is_valid():
@@ -159,7 +176,14 @@ def product_create(request):
             return redirect("mercado:productlist")
     else:
         form = ProductForm()
-    return render(request, "product_form.html", {"form": form, "is_edit": False})
+    
+    context = {
+        "form": form,
+        "is_edit": False,
+        "mp_connected": profile.has_mercadopago_connected,
+        "is_debug": settings.DEBUG,
+    }
+    return render(request, "product_form.html", context)
 
 
 @login_required
@@ -356,21 +380,14 @@ def cart_remove(request, product_id: int):
 
 @login_required
 def create_preference_cart(request):
-    """Crea una preferencia de pago para el carrito del usuario.
-    Incluye validaciones de token, carrito vacío y manejo robusto de errores.
+    """
+    Crea una preferencia de pago para el carrito del usuario.
+    En producción, usa MercadoPago Marketplace con split payments.
+    En desarrollo, usa credenciales simples de prueba.
     """
     cart, created = CartService.get_or_create_cart(request.user)
 
-    # Validar ACCESS TOKEN
-    access_token = getattr(settings, "MERCADOPAGO_ACCESS_TOKEN", None)
-    if not access_token:
-        logger.error("MERCADOPAGO_ACCESS_TOKEN no configurado")
-        return JsonResponse(
-            {"error": "payment_unavailable", "message": "Servicio de pago no disponible temporalmente."},
-            status=503,
-        )
-
-    # Validar el carrito con el servicio
+    # Validar el carrito
     is_valid, error_message = CartService.validate_cart_for_checkout(cart)
     if not is_valid:
         logger.warning(f"Validación de carrito fallida para usuario {request.user.id}: {error_message}")
@@ -378,13 +395,47 @@ def create_preference_cart(request):
             {"error": "cart_validation_failed", "message": error_message},
             status=400,
         )
+    
+    cart_items = cart.items.select_related('product__seller__profile').all()
+    
+    if not settings.DEBUG:
+        sellers_without_mp = []
+        for item in cart_items:
+            if not item.product.seller.profile.has_mercadopago_connected:
+                sellers_without_mp.append(item.product.seller.username)
+        
+        if sellers_without_mp:
+            sellers_str = ", ".join(sellers_without_mp)
+            logger.error(f"Vendedores sin MercadoPago en carrito de usuario {request.user.id}: {sellers_str}")
+            return JsonResponse(
+                {"error": "seller_mp_missing", 
+                 "message": f"Los siguientes vendedores no tienen MercadoPago conectado: {sellers_str}. No es posible procesar el pago."},
+                status=400,
+            )
+    
+    # Determinar si usamos marketplace o modo simple
+    use_marketplace = not settings.DEBUG and settings.MERCADOPAGO_APP_ID
+    
+    if use_marketplace:
+        return _create_marketplace_preference(request, cart, cart_items)
+    else:
+        return _create_simple_preference(request, cart, cart_items)
 
+
+def _create_simple_preference(request, cart, cart_items):
+    """Crea preferencia simple para desarrollo (sin split payments)."""
+    access_token = getattr(settings, "MERCADOPAGO_ACCESS_TOKEN", None)
+    if not access_token:
+        logger.error("MERCADOPAGO_ACCESS_TOKEN no configurado")
+        return JsonResponse(
+            {"error": "payment_unavailable", "message": "Servicio de pago no disponible temporalmente."},
+            status=503,
+        )
+    
     sdk = mercadopago.SDK(access_token)
     
-    cart_items = cart.items.select_related('product').all()
     items = []
     for item in cart_items:
-        # Seguridad: forzar tipos primitivos y evitar valores sospechosos en título
         title = (item.product.title or "Producto").strip()[:120]
         items.append({
             "title": title,
@@ -392,49 +443,242 @@ def create_preference_cart(request):
             "unit_price": float(item.product.price),
             "currency_id": "ARS",
         })
-
+    
+    base_url = f"{request.scheme}://{request.get_host()}"
+    success_url = f"{base_url}/market/pago-exitoso/"
+    failure_url = f"{base_url}/market/pago-fallido/"
+    
     preference_data = {
         "items": items,
         "back_urls": {
-            "success": request.build_absolute_uri("/mercado/pago-exitoso/"),
-            "failure": request.build_absolute_uri("/mercado/pago-fallido/"),
+            "success": success_url,
+            "failure": failure_url,
+            "pending": failure_url,
         },
-        "auto_return": "approved",
+        "external_reference": f"user_{request.user.id}",
     }
-
+    
+    if not request.get_host().startswith(('localhost', '127.0.0.1')):
+        webhook_url = f"{base_url}/market/webhook/"
+        preference_data["notification_url"] = webhook_url
+    
+    logger.info(f"[DEV] Creando preferencia simple para usuario {request.user.id}")
+    
     try:
         preference = sdk.preference().create(preference_data)
         response = preference.get("response", {})
+        
+        if preference.get("status") != 201:
+            error_message = response.get("message", "Error desconocido")
+            cause = response.get("cause", [])
+            logger.error(f"MercadoPago error: {error_message}, cause: {cause}")
+            return JsonResponse(
+                {"error": "payment_error", "message": f"Error al crear la preferencia de pago: {error_message}"},
+                status=502,
+            )
+        
         init_point = response.get("init_point")
         if not init_point:
-            logger.error(f"MercadoPago no devolvió init_point para usuario {request.user.id}")
+            logger.error(f"MercadoPago no devolvió init_point. Response: {response}")
             return JsonResponse(
                 {"error": "payment_error", "message": "No se pudo iniciar el pago. Intenta más tarde."},
                 status=502,
             )
-        logger.info(f"Preferencia de pago creada para usuario {request.user.id}")
+        
+        logger.info(f"Preferencia simple creada exitosamente para usuario {request.user.id}")
         return JsonResponse({"init_point": init_point})
+        
     except Exception as e:
-        logger.exception(f"Error al crear preferencia de pago para usuario {request.user.id}: {e}")
+        logger.exception(f"Error al crear preferencia: {e}")
         return JsonResponse(
-            {"error": "payment_exception", "message": "Ocurrió un error al iniciar el pago."},
+            {"error": "payment_exception", "message": f"Ocurrió un error al iniciar el pago: {str(e)}"},
             status=502,
         )
+
+
+def _create_marketplace_preference(request, cart, cart_items):
+    """
+    Crea preferencia con MercadoPago Marketplace y split payments.
+    Cada vendedor recibe su parte directamente en su cuenta.
+    """
+    access_token = getattr(settings, "MERCADOPAGO_ACCESS_TOKEN", None)
+    if not access_token:
+        logger.error("MERCADOPAGO_ACCESS_TOKEN no configurado")
+        return JsonResponse(
+            {"error": "payment_unavailable", "message": "Servicio de pago no disponible temporalmente."},
+            status=503,
+        )
     
+    sdk = mercadopago.SDK(access_token)
+    platform_fee_percentage = settings.MERCADOPAGO_PLATFORM_FEE_PERCENTAGE
+    
+    from collections import defaultdict
+    seller_totals = defaultdict(float)
+    
+    items = []
+    for item in cart_items:
+        title = (item.product.title or "Producto").strip()[:120]
+        unit_price = float(item.product.price)
+        quantity = int(item.quantity)
+        subtotal = unit_price * quantity
+        
+        items.append({
+            "title": title,
+            "quantity": quantity,
+            "unit_price": unit_price,
+            "currency_id": "ARS",
+        })
+        
+        seller_totals[item.product.seller.id] += subtotal
+    
+    disbursements = []
+    for seller_id, total_amount in seller_totals.items():
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        seller = User.objects.get(id=seller_id)
+        seller_mp_id = seller.profile.mp_user_id
+        
+        if not seller_mp_id:
+            logger.error(f"Vendedor {seller.username} sin mp_user_id")
+            continue
+        
+        # Calcular comisión de plataforma
+        platform_fee = round(total_amount * (platform_fee_percentage / 100), 2)
+        seller_amount = round(total_amount - platform_fee, 2)
+        
+        disbursements.append({
+            "collector_id": int(seller_mp_id),
+            "amount": seller_amount,
+            "application_fee": platform_fee,
+            "description": f"Venta de {seller.username}",
+        })
+    
+    base_url = f"{request.scheme}://{request.get_host()}"
+    
+    preference_data = {
+        "items": items,
+        "back_urls": {
+            "success": f"{base_url}/market/pago-exitoso/",
+            "failure": f"{base_url}/market/pago-fallido/",
+            "pending": f"{base_url}/market/pago-fallido/",
+        },
+        "external_reference": f"user_{request.user.id}",
+        "marketplace": "Commercium",
+        "marketplace_fee": sum(d["application_fee"] for d in disbursements),
+        "disbursements": disbursements,
+        "notification_url": f"{base_url}/market/webhook/",
+    }
+    
+    logger.info(f"[MARKETPLACE] Creando preferencia con {len(disbursements)} splits para usuario {request.user.id}")
+    logger.info(f"Disbursements: {disbursements}")
+    
+    try:
+        preference = sdk.preference().create(preference_data)
+        response = preference.get("response", {})
+        
+        if preference.get("status") != 201:
+            error_message = response.get("message", "Error desconocido")
+            cause = response.get("cause", [])
+            logger.error(f"MercadoPago Marketplace error: {error_message}, cause: {cause}")
+            return JsonResponse(
+                {"error": "payment_error", "message": f"Error al crear la preferencia de pago: {error_message}"},
+                status=502,
+            )
+        
+        init_point = response.get("init_point")
+        if not init_point:
+            logger.error(f"MercadoPago no devolvió init_point. Response: {response}")
+            return JsonResponse(
+                {"error": "payment_error", "message": "No se pudo iniciar el pago. Intenta más tarde."},
+                status=502,
+            )
+        
+        logger.info(f"Preferencia Marketplace creada exitosamente para usuario {request.user.id}")
+        return JsonResponse({"init_point": init_point})
+        
+    except Exception as e:
+        logger.exception(f"Error al crear preferencia Marketplace: {e}")
+        return JsonResponse(
+            {"error": "payment_exception", "message": f"Ocurrió un error al iniciar el pago: {str(e)}"},
+            status=502,
+        )
 
 
+@login_required
 def payment_success(request):
     """
     Vista para manejar el retorno exitoso desde MercadoPago.
+    Verifica el pago, crea la orden, reduce stock y notifica vendedores.
     
     Args:
         request: HttpRequest con parámetros de pago de MercadoPago
     
     Returns:
-        HttpResponse con template de éxito
+        HttpResponse con template de éxito o error
     """
-    messages.success(request, "Pago aprobado. ¡Gracias por tu compra!")
-    return render(request, "payment_success.html")
+    payment_id = request.GET.get('payment_id')
+    status = request.GET.get('status')
+    
+    if not payment_id:
+        messages.error(request, "No se recibió información del pago.")
+        return redirect('mercado:view-cart')
+    
+    # Verificar si ya existe una orden con este payment_id
+    existing_order = Order.objects.filter(payment_id=payment_id).first()
+    if existing_order:
+        logger.info(f"Payment {payment_id} ya fue procesado (orden #{existing_order.id})")
+        messages.success(request, "Tu pago ya fue procesado anteriormente.")
+        return render(request, "payment_success.html", {"order": existing_order})
+    
+    # Verificar el pago con MercadoPago
+    access_token = getattr(settings, "MERCADOPAGO_ACCESS_TOKEN", None)
+    if not access_token:
+        logger.error("MERCADOPAGO_ACCESS_TOKEN no configurado al procesar pago")
+        messages.error(request, "Error de configuración. Contacta al administrador.")
+        return redirect('mercado:view-cart')
+    
+    try:
+        success, order, message = OrderService.verify_and_process_payment(payment_id, access_token)
+        
+        if not success:
+            messages.error(request, f"No se pudo verificar el pago: {message}")
+            return redirect('mercado:view-cart')
+        
+        # Si el pago está verificado, crear la orden desde el carrito
+        cart, _ = CartService.get_or_create_cart(request.user)
+        
+        if not cart.items.exists():
+            # El carrito ya fue procesado (por webhook o doble click)
+            if order:
+                messages.info(request, "Tu orden ya fue procesada.")
+                return render(request, "payment_success.html", {"order": order})
+            else:
+                messages.warning(request, "Tu carrito está vacío.")
+                return redirect('mercado:productlist')
+        
+        # Crear la orden
+        with transaction.atomic():
+            order = OrderService.create_order_from_cart(
+                cart,
+                payment_id=payment_id,
+                preference_id=request.GET.get('preference_id')
+            )
+            order.payment_status = status
+            order.save(update_fields=['payment_status'])
+        
+        logger.info(f"Orden {order.id} creada exitosamente para payment {payment_id}")
+        messages.success(request, f"¡Pago aprobado! Tu orden #{order.id} ha sido procesada.")
+        
+        return render(request, "payment_success.html", {"order": order})
+        
+    except ValueError as e:
+        logger.error(f"Error al crear orden desde carrito: {e}")
+        messages.error(request, f"Error al procesar tu compra: {str(e)}")
+        return redirect('mercado:view-cart')
+    except Exception as e:
+        logger.exception(f"Error inesperado al procesar payment {payment_id}: {e}")
+        messages.error(request, "Ocurrió un error al procesar tu compra. Contacta al administrador.")
+        return redirect('mercado:view-cart')
 
 
 def payment_failure(request):
@@ -449,6 +693,80 @@ def payment_failure(request):
     """
     messages.error(request, "El pago no se pudo completar o fue cancelado.")
     return render(request, "payment_failure.html")
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def mercadopago_webhook(request):
+    """
+    Webhook para recibir notificaciones IPN de MercadoPago.
+    Este endpoint procesa pagos de forma asíncrona cuando el usuario no regresa al sitio.
+    
+    Args:
+        request: HttpRequest con notificación de MercadoPago
+    
+    Returns:
+        HttpResponse con status 200 o error
+    """
+    try:
+        import json
+        
+        # MercadoPago envía el tipo de notificación
+        topic = request.GET.get('topic') or request.GET.get('type')
+        notification_id = request.GET.get('id')
+        
+        logger.info(f"Webhook recibido: topic={topic}, id={notification_id}")
+        
+        if topic != 'payment':
+            logger.info(f"Webhook ignorado: topic {topic} no es payment")
+            return HttpResponse(status=200)
+        
+        # Obtener información del pago
+        access_token = getattr(settings, "MERCADOPAGO_ACCESS_TOKEN", None)
+        if not access_token:
+            logger.error("MERCADOPAGO_ACCESS_TOKEN no configurado en webhook")
+            return HttpResponse(status=500)
+        
+        sdk = mercadopago.SDK(access_token)
+        
+        # Si recibimos notification_id, obtener info de la notificación
+        if notification_id:
+            payment_info = sdk.payment().get(notification_id)
+        else:
+            logger.warning("Webhook sin notification_id")
+            return HttpResponse(status=200)
+        
+        response = payment_info.get("response", {})
+        
+        if not response:
+            logger.error(f"No se pudo obtener información del pago {notification_id}")
+            return HttpResponse(status=200)
+        
+        payment_id = str(response.get("id"))
+        status = response.get("status")
+        
+        logger.info(f"Webhook payment_id={payment_id}, status={status}")
+        
+        # Solo procesar pagos aprobados
+        if status != "approved":
+            logger.info(f"Pago {payment_id} no aprobado (status={status}), no se procesa")
+            return HttpResponse(status=200)
+        
+        # Verificar si ya existe una orden
+        existing_order = Order.objects.filter(payment_id=payment_id).first()
+        if existing_order:
+            logger.info(f"Pago {payment_id} ya fue procesado (orden #{existing_order.id})")
+            return HttpResponse(status=200)
+        
+        external_reference = response.get("external_reference")
+       
+        logger.info(f"Pago {payment_id} aprobado pero sin carrito asociado en webhook")
+        
+        return HttpResponse(status=200)
+        
+    except Exception as e:
+        logger.exception(f"Error en webhook de MercadoPago: {e}")
+        return HttpResponse(status=500)
 
 
 @login_required
@@ -479,4 +797,58 @@ def delete_product_image(request, image_id):
     except Exception as e:
         logger.error(f"Error al eliminar imagen {image_id}: {e}")
         return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
+@login_required
+def my_purchases(request):
+    """Vista para ver el historial de compras del usuario."""
+    orders = OrderService.get_user_purchases(request.user)
+    return render(request, "my_purchases.html", {"orders": orders})
+
+
+@login_required
+def my_sales(request):
+    """Vista para ver el historial de ventas del usuario."""
+    sales = OrderService.get_user_sales(request.user)
+    
+    # Agrupar por orden para mejor visualización
+    from itertools import groupby
+    sales_by_order = []
+    for order_id, items in groupby(sales, key=lambda x: x.order.id):
+        items_list = list(items)
+        sales_by_order.append({
+            'order': items_list[0].order,
+            'items': items_list,
+            'total': sum(item.subtotal() for item in items_list)
+        })
+    
+    return render(request, "my_sales.html", {"sales_by_order": sales_by_order})
+
+
+@login_required
+def order_detail(request, order_id):
+    """Vista para ver el detalle de una orden."""
+    order = get_object_or_404(Order, id=order_id)
+    
+    # Solo el comprador o los vendedores pueden ver la orden
+    is_buyer = order.buyer == request.user
+    is_seller = order.items.filter(seller=request.user).exists()
+    
+    if not (is_buyer or is_seller or request.user.is_staff):
+        messages.error(request, "No tienes permiso para ver esta orden.")
+        return redirect('mercado:productlist')
+    
+    # Si es vendedor, solo mostrar sus items
+    if is_seller and not is_buyer:
+        items = order.items.filter(seller=request.user)
+    else:
+        items = order.items.all()
+    
+    return render(request, "order_detail.html", {
+        "order": order,
+        "items": items,
+        "is_buyer": is_buyer,
+        "is_seller": is_seller
+    })
+
 

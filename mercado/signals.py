@@ -2,10 +2,26 @@
 Señales para el módulo mercado.
 Manejo de eventos del ciclo de vida de modelos.
 """
-from django.db.models.signals import post_delete, pre_delete
+from django.db.models.signals import post_delete, post_save, pre_delete
 from django.dispatch import receiver
 
 from .models import CartItem, Product
+
+
+@receiver(post_save, sender=Product)
+def notify_followers_on_new_product(sender, instance, created, **kwargs):
+    """
+    Notifica a los seguidores cuando se crea un nuevo producto.
+    
+    Args:
+        sender: Modelo Product
+        instance: Instancia de Product
+        created: True si es un nuevo producto
+        **kwargs: Argumentos adicionales de la señal
+    """
+    if created and instance.active:
+        from notifications.services import NotificationService
+        NotificationService.create_new_product_notification(instance)
 
 
 @receiver(pre_delete, sender=Product)

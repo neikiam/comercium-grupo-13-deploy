@@ -12,4 +12,9 @@ urlpatterns = [
     # Moderación
     path('ban/<int:user_id>/confirm/', views.ban_user_confirm, name='ban_user_confirm'),
     path('ban/<int:user_id>/', views.ban_user, name='ban_user'),
+    # MercadoPago OAuth
+    path('mercadopago/', views.mercadopago_settings, name='mercadopago_settings'),
+    path('mercadopago/connect/', views.mercadopago_connect, name='mercadopago_connect'),
+    path('mercadopago/callback/', views.mercadopago_callback, name='mercadopago_callback'),
+    path('mercadopago/disconnect/', views.mercadopago_disconnect, name='mercadopago_disconnect'),
 ]

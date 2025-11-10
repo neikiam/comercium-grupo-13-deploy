@@ -8,7 +8,9 @@ def home(request):
     return render(request, "index.html", {"products": products})
 
 def login_view(request):
-    return render(request, 'login.html')
+    """Redirige a la vista de login de allauth."""
+    from django.shortcuts import redirect
+    return redirect('account_login')
 
 
 def error_404(request, exception):

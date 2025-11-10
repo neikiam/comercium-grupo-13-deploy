@@ -119,3 +119,66 @@ class CartItem(models.Model):
 
     def subtotal(self):
         return self.product.price * self.quantity
+
+
+class Order(models.Model):
+    """Orden de compra generada tras un pago exitoso."""
+    STATUS_PENDING = "pending"
+    STATUS_PAID = "paid"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_REFUNDED = "refunded"
+    
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pendiente"),
+        (STATUS_PAID, "Pagado"),
+        (STATUS_CANCELLED, "Cancelado"),
+        (STATUS_REFUNDED, "Reembolsado"),
+    ]
+    
+    buyer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="purchases")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    total = models.DecimalField(max_digits=12, decimal_places=2)
+    
+    # Información de MercadoPago
+    payment_id = models.CharField(max_length=100, blank=True, null=True, unique=True)
+    preference_id = models.CharField(max_length=100, blank=True, null=True)
+    payment_status = models.CharField(max_length=50, blank=True, null=True)
+    payment_type = models.CharField(max_length=50, blank=True, null=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Orden #{self.id} - {self.buyer} - ${self.total}"
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['buyer', '-created_at']),
+            models.Index(fields=['payment_id']),
+            models.Index(fields=['status', '-created_at']),
+        ]
+
+
+class OrderItem(models.Model):
+    """Items individuales de una orden."""
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
+    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True)
+    seller = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="sales")
+    
+    # Snapshot de datos del producto al momento de la compra
+    product_title = models.CharField(max_length=200)
+    product_price = models.DecimalField(max_digits=12, decimal_places=2)
+    quantity = models.PositiveIntegerField()
+    
+    def subtotal(self):
+        return self.product_price * self.quantity
+    
+    def __str__(self):
+        return f"{self.quantity}x {self.product_title}"
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['order', 'seller']),
+            models.Index(fields=['seller', 'order']),
+        ]

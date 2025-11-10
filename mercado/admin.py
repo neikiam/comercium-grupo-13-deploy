@@ -1,12 +1,12 @@
 from django.contrib import admin
 from django.db import transaction
 
-from .models import Cart, CartItem, Product, ProductImage
+from .models import Cart, CartItem, Product, ProductImage, Order, OrderItem
 
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ("id", "title", "seller", "marca", "price", "active", "created_at")
+    list_display = ("id", "title", "seller", "marca", "price", "stock", "active", "created_at")
     search_fields = ("title", "description", "marca", "seller__username")
     list_filter = ("active", "created_at", "seller")
     actions = ("soft_delete_selected", "safe_delete_selected",)
@@ -74,3 +74,32 @@ class ProductImageAdmin(admin.ModelAdmin):
     list_filter = ("product", "uploaded_at")
     search_fields = ("product__title",)
     ordering = ("product", "order")
+
+
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+    extra = 0
+    readonly_fields = ('product', 'seller', 'product_title', 'product_price', 'quantity', 'subtotal')
+    can_delete = False
+    
+    def subtotal(self, obj):
+        return obj.subtotal()
+
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ('id', 'buyer', 'status', 'total', 'payment_id', 'created_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('buyer__username', 'payment_id', 'preference_id')
+    readonly_fields = ('buyer', 'total', 'payment_id', 'preference_id', 'payment_status', 'payment_type', 'created_at', 'updated_at')
+    inlines = [OrderItemInline]
+    date_hierarchy = 'created_at'
+
+
+@admin.register(OrderItem)
+class OrderItemAdmin(admin.ModelAdmin):
+    list_display = ('id', 'order', 'product_title', 'seller', 'quantity', 'product_price')
+    list_filter = ('order__created_at', 'seller')
+    search_fields = ('product_title', 'seller__username', 'order__buyer__username')
+    readonly_fields = ('order', 'product', 'seller', 'product_title', 'product_price', 'quantity')
+
