@@ -63,13 +63,13 @@ def product_list(request):
 
     categories = request.GET.getlist('category')
     if categories:
-        queryset = queryset.filter(category__in=categories)
+        qs = qs.filter(category__in=categories)
 
     order = request.GET.get('order')
     query = request.GET.get('q')
 
     if query:
-        queryset = queryset.filter(
+        qs = qs.filter(
             Q(title__icontains=query) |
             Q(description__icontains=query) |
             Q(marca__icontains=query) |
@@ -78,13 +78,13 @@ def product_list(request):
 
     # Ordenamiento: recent (default), oldest, price_asc, price_desc
     if order == "price_asc":
-        queryset = queryset.order_by('price')
+        qs = qs.order_by('price')
     elif order == "price_desc":
-        queryset = queryset.order_by('-price')
+        qs = qs.order_by('-price')
     elif order == "oldest":
-        queryset = queryset.order_by('created_at')
+        qs = qs.order_by('created_at')
     else:
-        queryset = queryset.order_by('-created_at')
+        qs = qs.order_by('-created_at')
 
     all_categories = Product.CATEGORY_CHOICES
 
@@ -103,7 +103,7 @@ def product_list(request):
             'page_obj': page_obj,
             'all_categories': all_categories,
             'base_qs': base_qs,
-            'search_query': search_q or '',
+            'search_query': query or '',
             'selected_categories': categories,
             'order': order or 'recent',
         }
