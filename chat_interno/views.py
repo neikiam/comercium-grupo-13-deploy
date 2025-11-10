@@ -51,11 +51,17 @@ def messages_api(request):
         JsonResponse con lista de mensajes
     """
     after = request.GET.get("after_id")
-    limit = min(int(request.GET.get("limit", 50)), 100)  # Max 100 mensajes
+    try:
+        limit = min(int(request.GET.get("limit", 50)), 100)  # Max 100 mensajes
+    except (ValueError, TypeError):
+        limit = 50
     
     qs = ChatMessage.objects.select_related("user", "user__profile").all()
     if after:
-        qs = qs.filter(id__gt=int(after))
+        try:
+            qs = qs.filter(id__gt=int(after))
+        except (ValueError, TypeError):
+            pass 
     
     qs = qs[:limit]
     
@@ -329,11 +335,17 @@ def private_messages_api(request, thread_id: int):
         return HttpResponseForbidden()
     
     after = request.GET.get("after_id")
-    limit = min(int(request.GET.get("limit", 50)), 100)  # Max 100 mensajes
+    try:
+        limit = min(int(request.GET.get("limit", 50)), 100)  # Max 100 mensajes
+    except (ValueError, TypeError):
+        limit = 50
     
     qs = thread.messages.select_related("user", "user__profile").all()
     if after:
-        qs = qs.filter(id__gt=int(after))
+        try:
+            qs = qs.filter(id__gt=int(after))
+        except (ValueError, TypeError):
+            pass
     
     qs = qs[:limit]
     

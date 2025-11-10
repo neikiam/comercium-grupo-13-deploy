@@ -17,11 +17,11 @@
               <img src="https://ui-avatars.com/api/?name={{ cr.requester.username }}&background=random&size=40" alt="{{ cr.requester.username }}" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--retro-border);">
             {% endif %}
             <a href="{% url 'perfil:user_profile_view' cr.requester.id %}" class="nav-link-retro" style="flex:1;">👤 {{ cr.requester.username }}</a>
-            <form method="post" action="{% url 'chat_interno:request-accept' cr.id %}" onsubmit="return handleRequestAction(event, {{ cr.id }}, 'accept')">
+            <form method="post" action="{% url 'chat_interno:request-accept' cr.id %}" onsubmit="return handleRequestAction(event, {{ cr.id }}, &quot;accept&quot;)">
               {% csrf_token %}
               <button class="btn-retro btn-small" type="submit">✅ Aceptar</button>
             </form>
-            <form method="post" action="{% url 'chat_interno:request-decline' cr.id %}" onsubmit="return handleRequestAction(event, {{ cr.id }}, 'decline')">
+            <form method="post" action="{% url 'chat_interno:request-decline' cr.id %}" onsubmit="return handleRequestAction(event, {{ cr.id }}, &quot;decline&quot;)">
               {% csrf_token %}
               <button class="btn-retro btn-small" type="submit">❌ Rechazar</button>
             </form>

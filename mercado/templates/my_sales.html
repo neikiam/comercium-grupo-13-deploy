@@ -11,7 +11,7 @@
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 2px solid var(--retro-border); padding-bottom: 1rem;">
         <div>
           <h5 style="margin: 0;">Orden #{{ sale.order.id }}</h5>
-          <small style="color: #666;">Comprador: {{ sale.order.buyer.username }} | {{ sale.order.created_at|date:"d/m/Y H:i" }}</small>
+          <small style="color: #666;">Comprador: {% if sale.order.buyer %}{{ sale.order.buyer.username }}{% else %}Usuario eliminado{% endif %} | {{ sale.order.created_at|date:"d/m/Y H:i" }}</small>
         </div>
         <div style="text-align: right;">
           <h4 style="margin: 0;">${{ sale.total }}</h4>

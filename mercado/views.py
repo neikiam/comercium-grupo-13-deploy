@@ -20,6 +20,7 @@ from PIL import Image
 from .forms import ProductForm
 from .models import Cart, CartItem, Product, ProductImage, Order, OrderItem
 from .services import CartService, ProductService, OrderService
+from perfil.models import Profile
 from notifications.services import NotificationService
 
 logger = logging.getLogger(__name__)
@@ -141,7 +142,7 @@ def product_create(request):
         HttpResponse con formulario o redirect a lista de productos
     """
     # Verificar si MercadoPago está conectado (solo en producción)
-    profile = request.user.profile
+    profile, created = Profile.objects.get_or_create(user=request.user)
     if not settings.DEBUG and not profile.has_mercadopago_connected:
         messages.error(
             request, 
@@ -398,8 +399,10 @@ def create_preference_cart(request):
     if not settings.DEBUG:
         sellers_without_mp = []
         for item in cart_items:
-            if not item.product.seller.profile.has_mercadopago_connected:
-                sellers_without_mp.append(item.product.seller.username)
+            seller = item.product.seller
+            seller_profile = getattr(seller, 'profile', None)
+            if not seller_profile or not seller_profile.has_mercadopago_connected:
+                sellers_without_mp.append(seller.username)
         
         if sellers_without_mp:
             sellers_str = ", ".join(sellers_without_mp)
@@ -532,8 +535,14 @@ def _create_marketplace_preference(request, cart, cart_items):
     for seller_id, total_amount in seller_totals.items():
         from django.contrib.auth import get_user_model
         User = get_user_model()
-        seller = User.objects.get(id=seller_id)
-        seller_mp_id = seller.profile.mp_user_id
+        seller = get_object_or_404(User, id=seller_id)
+        seller_profile = getattr(seller, 'profile', None)
+        
+        if not seller_profile:
+            logger.error(f"Vendedor {seller.username} sin perfil")
+            continue
+            
+        seller_mp_id = seller_profile.mp_user_id
         
         if not seller_mp_id:
             logger.error(f"Vendedor {seller.username} sin mp_user_id")
@@ -806,18 +815,19 @@ def my_purchases(request):
 @login_required
 def my_sales(request):
     """Vista para ver el historial de ventas del usuario."""
-    sales = OrderService.get_user_sales(request.user)
+    sales = OrderService.get_user_sales(request.user).order_by('order_id')  # Ordenar antes de groupby
     
     # Agrupar por orden para mejor visualización
     from itertools import groupby
     sales_by_order = []
     for order_id, items in groupby(sales, key=lambda x: x.order.id):
         items_list = list(items)
-        sales_by_order.append({
-            'order': items_list[0].order,
-            'items': items_list,
-            'total': sum(item.subtotal() for item in items_list)
-        })
+        if items_list:  # Validar que no esté vacío
+            sales_by_order.append({
+                'order': items_list[0].order,
+                'items': items_list,
+                'total': sum(item.subtotal() for item in items_list)
+            })
     
     return render(request, "my_sales.html", {"sales_by_order": sales_by_order})
 
