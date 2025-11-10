@@ -22,7 +22,7 @@
       {% if is_buyer %}
       <div>
         <label style="font-weight: 600; display: block; margin-bottom: 0.25rem;">Comprador:</label>
-        <span>{{ order.buyer.username }}</span>
+        <span>{% if order.buyer %}{{ order.buyer.username }}{% else %}Usuario eliminado{% endif %}</span>
       </div>
       {% endif %}
       
@@ -42,7 +42,7 @@
         <div style="display: flex; justify-content: space-between; align-items: start;">
           <div>
             <h6 style="margin: 0 0 0.5rem 0;">{{ item.product_title }}</h6>
-            <small style="color: #666;">Vendedor: {{ item.seller.username }}</small>
+            <small style="color: #666;">Vendedor: {% if item.seller %}{{ item.seller.username }}{% else %}Usuario eliminado{% endif %}</small>
           </div>
           <div style="text-align: right;">
             <div style="margin-bottom: 0.25rem;">{{ item.quantity }} x ${{ item.product_price }}</div>

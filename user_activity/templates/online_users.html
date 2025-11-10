@@ -7,7 +7,7 @@
       {% for ua in active %}
         <li style="padding: 0.5rem 0; border-bottom: 1px solid var(--retro-border);">
           <span class="badge-retro" style="margin-right: 0.5rem;">👤</span>
-          {{ ua.user.username }} — {{ ua.last_seen|timesince }} ago
+          {% if ua.user %}{{ ua.user.username }}{% else %}Usuario desconocido{% endif %} — {{ ua.last_seen|timesince }} ago
         </li>
       {% empty %}
         <li style="text-align: center; color: #666;">No hay usuarios conectados.</li>

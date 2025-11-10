@@ -11,6 +11,7 @@ from django.views.decorators.http import require_POST
 from django.conf import settings
 
 from mercado.models import Product
+from .models import Profile
 
 from .forms import ProfileForm
 
@@ -33,7 +34,7 @@ def profile_view(request):
     Returns:
         HttpResponse con template de perfil
     """
-    profile = request.user.profile
+    profile, created = Profile.objects.get_or_create(user=request.user)
     # Mostrar solo productos activos del usuario para evitar ver eliminados o pausados
     user_products = Product.objects.filter(seller=request.user, active=True).select_related('seller').order_by('-created_at')
     
@@ -95,7 +96,7 @@ def edit_profile(request):
     Returns:
         HttpResponse con formulario o redirect a perfil
     """
-    profile = request.user.profile
+    profile, created = Profile.objects.get_or_create(user=request.user)
     if request.method == "POST":
         form = ProfileForm(request.POST, request.FILES, instance=profile)
         
@@ -124,7 +125,7 @@ def delete_avatar(request):
         Redirect a edición de perfil
     """
     if request.method == "POST":
-        profile = request.user.profile
+        profile, created = Profile.objects.get_or_create(user=request.user)
         if profile.avatar:
             profile.avatar.delete(save=False)
             profile.avatar = None
@@ -197,7 +198,7 @@ def mercadopago_settings(request):
     """
     Página de configuración de MercadoPago del usuario.
     """
-    profile = request.user.profile
+    profile, created = Profile.objects.get_or_create(user=request.user)
     platform_fee = settings.MERCADOPAGO_PLATFORM_FEE_PERCENTAGE
     seller_percentage = 100 - platform_fee
     mp_app_configured = bool(settings.MERCADOPAGO_APP_ID and settings.MERCADOPAGO_CLIENT_SECRET)
@@ -270,7 +271,7 @@ def mercadopago_callback(request):
         response.raise_for_status()
         data = response.json()
         
-        profile = request.user.profile
+        profile, created = Profile.objects.get_or_create(user=request.user)
         profile.mp_access_token = data.get('access_token')
         profile.mp_refresh_token = data.get('refresh_token')
         profile.mp_public_key = data.get('public_key')
@@ -294,7 +295,7 @@ def mercadopago_disconnect(request):
     """
     Desconecta la cuenta de MercadoPago del usuario.
     """
-    profile = request.user.profile
+    profile, created = Profile.objects.get_or_create(user=request.user)
     profile.mp_access_token = None
     profile.mp_refresh_token = None
     profile.mp_public_key = None

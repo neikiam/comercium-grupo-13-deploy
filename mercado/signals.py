@@ -20,8 +20,13 @@ def notify_followers_on_new_product(sender, instance, created, **kwargs):
         **kwargs: Argumentos adicionales de la señal
     """
     if created and instance.active:
-        from notifications.services import NotificationService
-        NotificationService.create_new_product_notification(instance)
+        try:
+            from notifications.services import NotificationService
+            NotificationService.create_new_product_notification(instance)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error al crear notificación de producto {instance.id}: {e}")
 
 
 @receiver(pre_delete, sender=Product)
