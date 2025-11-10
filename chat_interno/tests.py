@@ -210,11 +210,14 @@ class BlockingViewTests(TestCase):
         self.assertFalse(DirectMessageThread.objects.filter(user1=self.user2, user2=self.user1).exists())
 
     def test_blocking_prevents_private_chat_access(self):
+        """Cuando hay bloqueo, se puede ver el chat pero no escribir."""
         a, b = (self.user1, self.user2) if self.user1.id < self.user2.id else (self.user2, self.user1)
         thread = DirectMessageThread.objects.create(user1=a, user2=b)
         BlockedUser.objects.create(blocker=self.user1, blocked=self.user2)
         response = self.client.get(reverse('chat_interno:private-chat', args=[thread.id]))
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['is_blocked'])
+        self.assertFalse(response.context['can_write'])
 
     def test_blocking_prevents_sending_messages(self):
         a, b = (self.user1, self.user2) if self.user1.id < self.user2.id else (self.user2, self.user1)
