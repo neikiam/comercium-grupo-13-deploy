@@ -146,6 +146,17 @@ def ban_user_confirm(request, user_id):
     if target_user == request.user:
         messages.error(request, "No puedes banearte a ti mismo.")
         return redirect('perfil:user_profile_view', user_id=user_id)
+    
+    # staff no puede banear a superuser, solo superuser puede banear a staff
+    if target_user.is_superuser and not request.user.is_superuser:
+        messages.error(request, "No tienes permiso para banear a un superusuario.")
+        return redirect('perfil:user_profile_view', user_id=user_id)
+    
+    if target_user.is_staff and not request.user.is_superuser:
+        messages.error(request, "Solo un superusuario puede banear a staff.")
+        return redirect('perfil:user_profile_view', user_id=user_id)
+    
+    return render(request, 'ban_user_confirm.html', {'target_user': target_user})
 
 
 @login_required
@@ -160,6 +171,21 @@ def ban_user(request, user_id):
     if target_user == request.user:
         messages.error(request, "No puedes banearte a ti mismo.")
         return redirect('perfil:ban_user_confirm', user_id=user_id)
+    
+    # staff no puede banear a superuser, solo superuser puede banear a staff
+    if target_user.is_superuser and not request.user.is_superuser:
+        messages.error(request, "No tienes permiso para banear a un superusuario.")
+        return redirect('perfil:user_profile_view', user_id=user_id)
+    
+    if target_user.is_staff and not request.user.is_superuser:
+        messages.error(request, "Solo un superusuario puede banear a staff.")
+        return redirect('perfil:user_profile_view', user_id=user_id)
+    
+    # Ejecutar baneo
+    username = target_user.username
+    target_user.delete()  # CASCADE eliminará Profile y Products
+    messages.success(request, f"Usuario {username} ha sido baneado y eliminado del sistema.")
+    return redirect('core:index')
 
 
 # ============================================
