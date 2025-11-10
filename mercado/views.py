@@ -52,19 +52,15 @@ def validate_additional_image(image_file):
 def product_list(request):
     """
     Lista productos activos con filtrado, búsqueda, ordenamiento y paginación.
-    
-    Args:
-        request: HttpRequest con parámetros opcionales:
-            - categories: filtro de categorías (separadas por coma)
-            - order: ordenamiento (recent, oldest, price_asc, price_desc)
-            - q: búsqueda por texto
-            - page: número de página
-    
-    Returns:
-        HttpResponse con template de lista de productos
+
+    Parámetros GET soportados:
+      - category: puede repetirse para múltiples categorías
+      - order: recent (default), oldest, price_asc, price_desc
+      - q: texto de búsqueda
+      - page: número de página
     """
-    queryset = Product.objects.filter(active=True).select_related('seller').prefetch_related('images')
-    
+    qs = Product.objects.filter(active=True).select_related('seller').prefetch_related('images')
+
     categories = request.GET.getlist('category')
     if categories:
         queryset = queryset.filter(category__in=categories)
@@ -96,19 +92,20 @@ def product_list(request):
     get_params.pop('page', None)
     base_qs = get_params.urlencode()
 
-    pass
-    
-    paginator = Paginator(queryset, PRODUCTS_PER_PAGE)
+    paginator = Paginator(qs, PRODUCTS_PER_PAGE)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
     return render(
         request,
-        "product_list.html",
+        'product_list.html',
         {
-            "page_obj": page_obj,
-            "all_categories": all_categories,
-            "base_qs": base_qs,
+            'page_obj': page_obj,
+            'all_categories': all_categories,
+            'base_qs': base_qs,
+            'search_query': search_q or '',
+            'selected_categories': categories,
+            'order': order or 'recent',
         }
     )
 
