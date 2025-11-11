@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -55,14 +55,16 @@ def product_list(request):
     Lista productos activos con filtrado, búsqueda, ordenamiento y paginación.
 
     Parámetros GET soportados:
-      - category: puede repetirse para múltiples categorías
+      - categories: cadena separada por comas con las categorías seleccionadas
       - order: recent (default), oldest, price_asc, price_desc
       - q: texto de búsqueda
       - page: número de página
     """
     qs = Product.objects.filter(active=True).select_related('seller').prefetch_related('images')
 
-    categories = request.GET.getlist('category')
+    categories_param = request.GET.get('categories', '')
+    categories = [cat.strip() for cat in categories_param.split(',') if cat.strip()]
+    
     if categories:
         qs = qs.filter(category__in=categories)
 
@@ -633,6 +635,7 @@ def payment_success(request):
     existing_order = Order.objects.filter(payment_id=payment_id).first()
     if existing_order:
         logger.info(f"Payment {payment_id} ya fue procesado (orden #{existing_order.id})")
+        logger.info(f"  - Items en la orden: {existing_order.items.count()}")
         messages.success(request, "Tu pago ya fue procesado anteriormente.")
         return render(request, "payment_success.html", {"order": existing_order})
     
@@ -653,11 +656,20 @@ def payment_success(request):
         # Si el pago está verificado, crear la orden desde el carrito
         cart, _ = CartService.get_or_create_cart(request.user)
         
+        logger.info(f"Procesando orden para payment {payment_id}:")
+        logger.info(f"  - Usuario: {request.user.username}")
+        logger.info(f"  - Items en carrito: {cart.items.count()}")
+        
         if not cart.items.exists():
             # El carrito ya fue procesado (por webhook o doble click)
             if order:
-                messages.info(request, "Tu orden ya fue procesada.")
-                return render(request, "payment_success.html", {"order": order})
+                if order.items.exists():
+                    messages.info(request, "Tu orden ya fue procesada.")
+                    return render(request, "payment_success.html", {"order": order})
+                else:
+                    logger.error(f"Orden {order.id} existe pero no tiene items. Payment: {payment_id}")
+                    messages.error(request, "Hubo un problema con tu orden. Contacta al administrador.")
+                    return redirect('mercado:view-cart')
             else:
                 messages.warning(request, "Tu carrito está vacío.")
                 return redirect('mercado:productlist')
@@ -672,7 +684,16 @@ def payment_success(request):
             order.payment_status = status
             order.save(update_fields=['payment_status'])
         
+        if not order.items.exists():
+            logger.error(f"ERROR CRÍTICO: Orden {order.id} creada pero sin items!")
+            logger.error(f"  - Payment ID: {payment_id}")
+            logger.error(f"  - Usuario: {request.user.username}")
+            messages.error(request, "Hubo un error al procesar tu orden. Contacta al administrador con el código de orden #" + str(order.id))
+            return redirect('mercado:view-cart')
+        
         logger.info(f"Orden {order.id} creada exitosamente para payment {payment_id}")
+        logger.info(f"  - Items creados: {order.items.count()}")
+        logger.info(f"  - Total: ${order.total}")
         messages.success(request, f"¡Pago aprobado! Tu orden #{order.id} ha sido procesada.")
         
         return render(request, "payment_success.html", {"order": order})
@@ -808,7 +829,10 @@ def delete_product_image(request, image_id):
 @login_required
 def my_purchases(request):
     """Vista para ver el historial de compras del usuario."""
-    orders = OrderService.get_user_purchases(request.user)
+    orders = OrderService.get_user_purchases(request.user).annotate(
+        items_count=Count('items')
+    ).filter(items_count__gt=0)
+    
     return render(request, "my_purchases.html", {"orders": orders})
 
 

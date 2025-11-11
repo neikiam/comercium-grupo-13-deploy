@@ -12,6 +12,8 @@ class Notification(models.Model):
     TYPE_NEW_PRODUCT = "new_product"  # Nuevo producto de alguien que sigues
     TYPE_PRODUCT_SOLD_OUT = "product_sold_out"  # Tu producto se agotó
     TYPE_LOW_STOCK = "low_stock"  # Stock bajo en tu producto
+    TYPE_CHAT_REQUEST = "chat_request"  # Alguien te envió solicitud de chat
+    TYPE_CHAT_ACCEPTED = "chat_accepted"  # Aceptaron tu solicitud de chat
     
     TYPE_CHOICES = [
         (TYPE_NEW_SALE, "Nueva venta"),
@@ -19,6 +21,8 @@ class Notification(models.Model):
         (TYPE_NEW_PRODUCT, "Nuevo producto"),
         (TYPE_PRODUCT_SOLD_OUT, "Producto agotado"),
         (TYPE_LOW_STOCK, "Stock bajo"),
+        (TYPE_CHAT_REQUEST, "Solicitud de chat"),
+        (TYPE_CHAT_ACCEPTED, "Chat aceptado"),
     ]
     
     recipient = models.ForeignKey(

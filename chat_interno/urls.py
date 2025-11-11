@@ -20,6 +20,7 @@ urlpatterns = [
     path("requests/send/<int:user_id>/", views.request_send, name="request-send"),
     path("requests/accept/<int:request_id>/", views.request_accept, name="request-accept"),
     path("requests/decline/<int:request_id>/", views.request_decline, name="request-decline"),
+    path("requests/cancel/<int:request_id>/", views.request_cancel, name="request-cancel"),
     # Blocking
     path("blocked/", views.blocked_list, name="blocked-list"),
     path("blocked/block/<int:user_id>/", views.block_user, name="block-user"),

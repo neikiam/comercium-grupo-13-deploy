@@ -439,7 +439,11 @@ def request_send(request, user_id: int):
             return redirect("perfil:user_profile_view", user_id=user_id)
         return redirect("chat_interno:requests-list")
     
-    ChatRequest.objects.get_or_create(requester=request.user, target=other, status=ChatRequest.STATUS_REQUESTED)
+    chat_request, created = ChatRequest.objects.get_or_create(requester=request.user, target=other, status=ChatRequest.STATUS_REQUESTED)
+    
+    if created:
+        from notifications.services import NotificationService
+        NotificationService.create_chat_request_notification(request.user, other)
     
     if is_ajax:
         return JsonResponse({"success": True, "message": f"Solicitud enviada a {other.username}"})
@@ -464,6 +468,10 @@ def request_accept(request, request_id: int):
         return redirect("chat_interno:requests-list")
     
     cr.accept()
+    
+    from notifications.services import NotificationService
+    NotificationService.create_chat_accepted_notification(cr.requester, cr.target)
+    
     # Crear hilo si no existe
     a, b = (cr.requester, cr.target) if cr.requester.id < cr.target.id else (cr.target, cr.requester)
     thread, _ = DirectMessageThread.objects.get_or_create(user1=a, user2=b)
@@ -485,6 +493,20 @@ def request_decline(request, request_id: int):
         return JsonResponse({"success": True})
     
     messages.info(request, "Solicitud rechazada.")
+    return redirect("chat_interno:requests-list")
+
+
+@login_required
+@require_POST
+def request_cancel(request, request_id: int):
+    """Permite al remitente cancelar una solicitud pendiente."""
+    cr = get_object_or_404(ChatRequest, id=request_id, requester=request.user, status=ChatRequest.STATUS_REQUESTED)
+    cr.delete()
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({"success": True})
+    
+    messages.info(request, "Solicitud cancelada.")
     return redirect("chat_interno:requests-list")
 
 

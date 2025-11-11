@@ -102,3 +102,28 @@ class NotificationService:
             link=f"/market/product/{product.id}/edit/",
             related_product_id=product.id
         )
+    
+    @staticmethod
+    def create_chat_request_notification(requester, target):
+        """Notifica al usuario que recibió una solicitud de chat."""
+        Notification.objects.create(
+            recipient=target,
+            notification_type=Notification.TYPE_CHAT_REQUEST,
+            title="Nueva solicitud de chat",
+            message=f"{requester.username} te envió una solicitud de chat",
+            link=f"/chat/requests/",
+            related_user=requester
+        )
+    
+    @staticmethod
+    def create_chat_accepted_notification(requester, target):
+        """Notifica al usuario que su solicitud de chat fue aceptada."""
+        Notification.objects.create(
+            recipient=requester,
+            notification_type=Notification.TYPE_CHAT_ACCEPTED,
+            title="Solicitud de chat aceptada",
+            message=f"{target.username} aceptó tu solicitud de chat",
+            link=f"/chat/requests/",
+            related_user=target
+        )
+
