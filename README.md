@@ -29,7 +29,7 @@ La solución es un espacio simple y funcional con publicación de productos, cha
 
 ---
 
-## Instalación
+## Instalación modo desarrollo
 
 ## Pasos previos
 
