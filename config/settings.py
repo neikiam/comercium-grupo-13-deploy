@@ -202,22 +202,6 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-try:
-    if 'RENDER' in os.environ:
-        import cloudinary
-        cloudinary.config(
-            cloud_name='dlsjtvx8z',
-            api_key='453468442585231',
-            api_secret='sn6tNXEaL6euFxuQ8CuvENpocEg',
-            secure=True
-        )
-        DEFAULT_FILE_STORAGE = 'cloudinary.storage.MediaCloudinaryStorage'
-        
-        print("✅ Cloudinary activado en Render")
-except:
-    print("⚠️ Cloudinary no disponible - usando storage local")
-    pass
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Filtro personalizado para remover datos sensibles de los logs
