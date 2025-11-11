@@ -206,28 +206,29 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# Intentar usar Cloudinary si está configurado
-CLOUDINARY_URL = os.getenv("CLOUDINARY_URL")
-
-if CLOUDINARY_URL:
+# Usar Cloudinary en producción (Render)
+if 'RENDER' in os.environ:
+    # Estamos en Render - FORZAR Cloudinary
     try:
         import cloudinary
         import cloudinary.uploader
         import cloudinary.api
         
-        # Configurar Cloudinary
-        cloudinary.config(cloudinary_url=CLOUDINARY_URL)
+        # Configuración directa con tus credenciales
+        cloudinary.config(
+            cloud_name='dlsjtvx8z',
+            api_key='453468442585231',
+            api_secret='sn6tNXEaL6euFxuQ8CuvENpocEg',
+            secure=True
+        )
         
-        # Usar storage personalizado
         DEFAULT_FILE_STORAGE = 'config.cloudinary_storage.CloudinaryMediaStorage'
         
-        print(f"✅ Cloudinary ACTIVO - Cloud: {CLOUDINARY_URL.split('@')[1] if '@' in CLOUDINARY_URL else 'unknown'}")
+        print("✅ Cloudinary FORZADO en Render - Cloud: dlsjtvx8z")
     except Exception as e:
-        print(f"❌ Error configurando Cloudinary: {e}")
-        # Fallback a storage local
-        pass
+        print(f"❌ Error forzando Cloudinary: {e}")
 else:
-    print("⚠️ CLOUDINARY_URL no encontrada - usando storage local")
+    print("⚠️ Desarrollo local - usando storage local")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
