@@ -199,22 +199,35 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
+# =============================================================================
 # CONFIGURACIÓN DE MEDIA (IMÁGENES)
+# =============================================================================
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# Cloudinary para imágenes en producción (opcional)
-if os.getenv("CLOUDINARY_URL") and not DEBUG:
+# Intentar usar Cloudinary si está configurado
+CLOUDINARY_URL = os.getenv("CLOUDINARY_URL")
+
+if CLOUDINARY_URL:
     try:
         import cloudinary
         import cloudinary.uploader
         import cloudinary.api
         
-        cloudinary.config(cloudinary_url=os.getenv('CLOUDINARY_URL'))
+        # Configurar Cloudinary
+        cloudinary.config(cloudinary_url=CLOUDINARY_URL)
+        
+        # Usar storage personalizado
         DEFAULT_FILE_STORAGE = 'config.cloudinary_storage.CloudinaryMediaStorage'
-    except:
-        pass  # Si falla, usa MEDIA_ROOT local
+        
+        print(f"✅ Cloudinary ACTIVO - Cloud: {CLOUDINARY_URL.split('@')[1] if '@' in CLOUDINARY_URL else 'unknown'}")
+    except Exception as e:
+        print(f"❌ Error configurando Cloudinary: {e}")
+        # Fallback a storage local
+        pass
+else:
+    print("⚠️ CLOUDINARY_URL no encontrada - usando storage local")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
