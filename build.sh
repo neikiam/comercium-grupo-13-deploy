@@ -6,6 +6,9 @@ set -o errexit
 find . -type d -name __pycache__ -exec rm -r {} + 2>/dev/null || true
 find . -type f -name "*.pyc" -delete 2>/dev/null || true
 
+# actualizar el pip
+pip install --upgrade pip
+
 # instalar dependencias
 pip install -r requirements.txt
 
