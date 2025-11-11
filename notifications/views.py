@@ -16,13 +16,12 @@ User = get_user_model()
 def notification_list(request):
     """Vista para listar todas las notificaciones del usuario."""
     notifications = Notification.objects.filter(recipient=request.user).select_related('related_user')[:50]
+    unread_count = Notification.objects.filter(recipient=request.user, is_read=False).count()
     
-    # Marcar notificaciones como leídas al verlas
-    unread_ids = [n.id for n in notifications if not n.is_read]
-    if unread_ids:
-        Notification.objects.filter(id__in=unread_ids).update(is_read=True)
-    
-    return render(request, "notifications/notification_list.html", {"notifications": notifications})
+    return render(request, "notifications/notification_list.html", {
+        "notifications": notifications,
+        "unread_count": unread_count
+    })
 
 
 @login_required

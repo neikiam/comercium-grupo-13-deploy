@@ -4,27 +4,35 @@
 {% block content %}
 <div class="container" style="max-width: 800px; margin: 2rem auto;">
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-    <h2>🔔 Notificaciones</h2>
-    {% if notifications %}
-    <button id="mark-all-read" class="btn-retro btn-small">Marcar todas como leídas</button>
+    <h2>🔔 Notificaciones 
+      {% if unread_count > 0 %}
+      <span style="background: #ff4444; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.9rem;">{{ unread_count }}</span>
+      {% endif %}
+    </h2>
+    {% if unread_count > 0 %}
+    <button id="mark-all-read" class="btn-retro btn-small">✅ Marcar todas como leídas</button>
     {% endif %}
   </div>
 
   {% if notifications %}
     <div class="retro-panel">
       {% for notification in notifications %}
-      <div style="padding: 1rem; border-bottom: 1px solid #eee; {% if not notification.is_read %}background: #f0f8ff;{% endif %}">
-        <div style="display: flex; justify-content: space-between; align-items: start;">
+      <div id="notification-{{ notification.id }}" style="padding: 1rem; border-bottom: 1px solid #eee; {% if not notification.is_read %}background: #f0f8ff; border-left: 4px solid #4caf50;{% endif %}">
+        <div style="display: flex; justify-content: space-between; align-items: start; gap: 1rem;">
           <div style="flex: 1;">
             <h6 style="margin: 0 0 0.5rem 0; {% if not notification.is_read %}font-weight: 700;{% endif %}">
+              {% if notification.notification_type == 'chat_request' %}💬{% elif notification.notification_type == 'chat_accepted' %}✅{% elif notification.notification_type == 'new_follower' %}👤{% elif notification.notification_type == 'new_sale' %}💰{% elif notification.notification_type == 'new_product' %}🆕{% endif %}
               {{ notification.title }}
             </h6>
             <p style="margin: 0 0 0.5rem 0; color: #666;">{{ notification.message }}</p>
             <small style="color: #999;">{{ notification.created_at|timesince }} atrás</small>
           </div>
-          <div style="margin-left: 1rem;">
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
             {% if notification.link %}
             <a href="{{ notification.link }}" class="btn-retro btn-small">Ver</a>
+            {% endif %}
+            {% if not notification.is_read %}
+            <button class="btn-retro-secondary btn-small mark-read-btn" data-id="{{ notification.id }}">✓</button>
             {% endif %}
           </div>
         </div>
@@ -40,6 +48,10 @@
 
 <script>
 document.getElementById('mark-all-read')?.addEventListener('click', function() {
+  const btn = this;
+  btn.disabled = true;
+  btn.textContent = '⏳ Marcando...';
+  
   fetch('{% url "notifications:mark-all-read" %}', {
     method: 'POST',
     headers: {
@@ -50,9 +62,84 @@ document.getElementById('mark-all-read')?.addEventListener('click', function() {
   .then(response => response.json())
   .then(data => {
     if (data.success) {
-      location.reload();
+      document.querySelectorAll('[id^="notification-"]').forEach(el => {
+        el.style.background = '';
+        el.style.borderLeft = '';
+        const title = el.querySelector('h6');
+        if (title) title.style.fontWeight = 'normal';
+        const markBtn = el.querySelector('.mark-read-btn');
+        if (markBtn) markBtn.remove();
+      });
+      btn.remove();
+      const badge = document.querySelector('h2 span');
+      if (badge) badge.remove();
+      updateNavbarCounter(0);
     }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    btn.disabled = false;
+    btn.textContent = '✅ Marcar todas como leídas';
   });
 });
+
+document.querySelectorAll('.mark-read-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const notificationId = this.dataset.id;
+    const notificationEl = document.getElementById('notification-' + notificationId);
+    
+    this.disabled = true;
+    this.textContent = '⏳';
+    
+    fetch(`/notifications/${notificationId}/read/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}',
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        notificationEl.style.background = '';
+        notificationEl.style.borderLeft = '';
+        const title = notificationEl.querySelector('h6');
+        if (title) title.style.fontWeight = 'normal';
+        this.remove();
+        
+        const badge = document.querySelector('h2 span');
+        if (badge) {
+          const currentCount = parseInt(badge.textContent);
+          const newCount = currentCount - 1;
+          if (newCount > 0) {
+            badge.textContent = newCount;
+          } else {
+            badge.remove();
+            const markAllBtn = document.getElementById('mark-all-read');
+            if (markAllBtn) markAllBtn.remove();
+          }
+          updateNavbarCounter(newCount);
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      this.disabled = false;
+      this.textContent = '✓';
+    });
+  });
+});
+
+function updateNavbarCounter(count) {
+  const navBadge = document.querySelector('.notification-badge');
+  if (navBadge) {
+    if (count > 0) {
+      navBadge.textContent = count;
+      navBadge.style.display = 'inline-block';
+    } else {
+      navBadge.style.display = 'none';
+    }
+  }
+}
 </script>
 {% endblock %}
