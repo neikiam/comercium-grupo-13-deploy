@@ -45,6 +45,8 @@ BASICS = [
 ]
 
 TERCEROS = [
+    "cloudinary_storage",
+    "cloudinary",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
@@ -198,8 +200,29 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+
+# CONFIGURACIÓN DE MEDIA (IMÁGENES Y ARCHIVOS SUBIDOS)
+
+# Cloudinary para producción (Render)
+USE_CLOUDINARY = os.getenv("CLOUDINARY_URL") is not None
+
+if USE_CLOUDINARY:
+    # Configuración de Cloudinary para producción
+    import cloudinary
+    import cloudinary.uploader
+    import cloudinary.api
+    
+    # Usar Cloudinary para almacenar archivos de media
+    DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+    MEDIA_URL = "/media/"
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
+        'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
+        'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
+    }
+else:
+    MEDIA_URL = "/media/"
+    MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
