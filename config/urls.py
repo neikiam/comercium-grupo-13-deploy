@@ -17,10 +17,12 @@ urlpatterns = [
     path("favicon.ico", RedirectView.as_view(url=static_tag('favicon.svg'), permanent=True)),
 ]
 
-
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+if not settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 handler404 = 'core.views.error_404'
 handler500 = 'core.views.error_500'
