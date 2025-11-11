@@ -40,13 +40,13 @@ BASICS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
-    "django.contrib.staticfiles",
-    "django.contrib.sites",
 ]
 
 TERCEROS = [
     "cloudinary_storage",
     "cloudinary",
+    "django.contrib.staticfiles",
+    "django.contrib.sites",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
