@@ -28,15 +28,18 @@ class CloudinaryMediaStorage(Storage):
         else:
             folder = 'media'
         
+        # Leer el contenido del archivo
+        content.seek(0)
+        
         # Subir a Cloudinary
         upload_result = cloudinary.uploader.upload(
-            content,
+            content.read(),
             folder=folder,
             resource_type='auto'
         )
         
-        # Retornar el public_id o la URL
-        return upload_result.get('public_id', upload_result.get('secure_url'))
+        # Retornar la URL completa
+        return upload_result.get('secure_url')
     
     def url(self, name):
         """
