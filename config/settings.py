@@ -43,8 +43,6 @@ BASICS = [
 ]
 
 TERCEROS = [
-    "cloudinary_storage",
-    "cloudinary",
     "django.contrib.staticfiles",
     "django.contrib.sites",
     "allauth",
@@ -62,7 +60,18 @@ PROPIAS = [
     "notifications",
 ]
 
-INSTALLED_APPS = BASICS + TERCEROS + PROPIAS
+# Agregar cloudinary solo si está disponible y configurado
+CLOUDINARY_APPS = []
+if os.getenv("CLOUDINARY_URL"):
+    try:
+        import cloudinary
+        import cloudinary_storage
+        # Cloudinary apps deben ir ANTES de staticfiles
+        CLOUDINARY_APPS = ["cloudinary_storage", "cloudinary"]
+    except ImportError:
+        pass
+
+INSTALLED_APPS = BASICS + CLOUDINARY_APPS + TERCEROS + PROPIAS
 
 
 SITE_ID = 1
@@ -203,24 +212,31 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # CONFIGURACIÓN DE MEDIA (IMÁGENES Y ARCHIVOS SUBIDOS)
 
-# Cloudinary para producción (Render)
+# Cloudinary para producción (Render), almacenamiento local para desarrollo
 USE_CLOUDINARY = os.getenv("CLOUDINARY_URL") is not None
 
 if USE_CLOUDINARY:
-    # Configuración de Cloudinary para producción
-    import cloudinary
-    import cloudinary.uploader
-    import cloudinary.api
-    
-    # Usar Cloudinary para almacenar archivos de media
-    DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
-    MEDIA_URL = "/media/"
-    CLOUDINARY_STORAGE = {
-        'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
-        'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
-        'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
-    }
+    try:
+        # Configuración de Cloudinary para producción
+        import cloudinary
+        import cloudinary.uploader
+        import cloudinary.api
+        
+        # Usar Cloudinary para almacenar archivos de media
+        DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+        MEDIA_URL = "/media/"
+        CLOUDINARY_STORAGE = {
+            'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
+            'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
+            'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
+        }
+    except ImportError:
+        # Si cloudinary no está instalado, usar almacenamiento local
+        MEDIA_URL = "/media/"
+        MEDIA_ROOT = BASE_DIR / "media"
+        USE_CLOUDINARY = False
 else:
+    # Almacenamiento local para desarrollo
     MEDIA_URL = "/media/"
     MEDIA_ROOT = BASE_DIR / "media"
 
